@@ -1,0 +1,260 @@
+#!/bin/sh
+
+set -e
+self="$(curl https://raw.githubusercontent.com/zw963/deployment_bash/v0.5.3/deploy_start.sh)" && eval "$self"
+
+export target=$1
+
+function postinstall () {
+    set -u
+    scp root@$targetip:/etc/v2ray/client.json ./router/opt/etc/v2ray.json
+}
+
+if grep -qs -e 'set_yours_password_here' server.json; then
+    echo 'v2ray server served as a shadowsocks server too.'
+    echo "You must set shadowsocks server password in \`server/v2ray-server/server.json'!"
+    exit
+fi
+
+copy server.json /etc/v2ray/config.json
+
+deploy_start
+
+# Following code is execute on remote VPS
+
+wget https://install.direct/go.sh
+bash go.sh
+
+uuid=$(uuidgen)
+
+replace_string 'NEWUUID' "${uuid}" /etc/v2ray/config.json
+
+cat <<'HEREDOC' > /etc/sysctl.d/98-v2ray.conf
+fs.file-max=51200
+
+net.core.rmem_max=67108864
+net.core.wmem_max=67108864
+net.core.netdev_max_backlog=250000
+net.core.somaxconn=4096
+
+net.ipv4.tcp_syncookies=1
+net.ipv4.tcp_tw_reuse=1
+net.ipv4.tcp_tw_recycle=0
+net.ipv4.tcp_fin_timeout=30
+net.ipv4.tcp_keepalive_time=1200
+net.ipv4.ip_local_port_range=10000 65000
+net.ipv4.tcp_max_syn_backlog=8192
+net.ipv4.tcp_max_tw_buckets=5000
+net.ipv4.tcp_mem=25600 51200 102400
+net.ipv4.tcp_rmem=4096 87380 67108864
+net.ipv4.tcp_wmem=4096 65536 67108864
+net.ipv4.tcp_mtu_probing=1
+net.ipv4.tcp_congestion_control=hybla
+
+# 开启内核 fastopen, Linux 3.7 以上支持, 3.13 才默认开启.
+# 等价于 echo 3 > /proc/sys/net/ipv4/tcp_fastopen
+net.ipv4.tcp_fastopen=3
+HEREDOC
+
+if kernel_version_greater_than 4.9; then
+    modprobe tcp_bbr && lsmod | grep bbr
+    echo "net.core.default_qdisc=fq" >> /etc/sysctl.d/98-v2ray.conf
+    echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.d/98-v2ray.conf
+fi
+
+sysctl -p > /dev/null
+
+# test bbr is enabled
+# sysctl net.ipv4.tcp_available_congestion_control |grep bbr
+# sysctl -n net.ipv4.tcp_congestion_control |grep bbr
+
+mkdir -p /var/log/v2ray
+
+if [[ -e /etc/redhat-release && $(cat /etc/redhat-release) =~ CentOS ]]; then
+    systemctl enable v2ray
+    systemctl restart v2ray
+    systemctl status v2ray
+elif [[ $(cat /etc/issue) =~ Ubuntu|Mint|Deepin ]]; then
+    systemctl enable v2ray
+    systemctl restart v2ray
+    systemctl status v2ray
+fi
+
+v2ray_port=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A10 |grep '"protocol" *: *"vmess"' -A3 |grep '"port"' |grep -o '[0-9]*')
+expose_port $v2ray_port
+
+cat <<HEREDOC > /etc/v2ray/client.json
+// 本脚本当运行 deploy_v2ray+ss_to_vps 时自动生成。
+// 本脚本可作为 普通 v2ray client 脚本，也可以作为 ASUS merlin 路由器透明代理 v2ray 脚本，
+// 运行 ./v2ray+dnsmasq+dnscrypt2 admin@router.asus.com 部署这个配置文件到路由器。
+
+{
+    // "log": {
+    //     "loglevel": "debug"
+    // },
+    "dns": {
+        "servers": [
+            {
+                "address": "localhost",
+                "port": 53,
+                "domains": [
+                    "geosite:cn"
+                ],
+                "expectIPs": [
+                    "geoip:cn"
+                ]
+            },
+            "8.8.4.4"
+        ]
+    },
+    "routing": {
+        "domainStrategy": "IPIfNonMatch",
+        // 介绍下完整的 V2Ray 数据包流程
+        // 1. 访问 www.ip111.cn
+        //    - 进入 routing
+        //    - ip111.cn 匹配 geosite:cn, 并且返回的 ip 在 geoip:cn 当中。
+        //    - 直连。
+
+        // 2. 访问 google.com
+        //    - 如果没有匹配到任何 rule, 本来应该从 \`默认主出站协议' 发出(outbounds 里面的第一个，proxy)
+        //    - 因为我们用了 IPIfNonMatch 策略, 如果不匹配，先尝试使用内置 DNS 解析域名的真实 IP。
+        //    - 内置 dns 中，localhost 无法匹配 google.com, 因此使用下一个匹配的 DNS, 这里是 8.8.4.4.
+        //    - 8.8.4.4 匹配第一条路由，因此直接走代理，避免做额外的检测。
+        //    - proxy 和 VPS v2ray server 建立 TCP 连接, 并通过这个连接发送 DNS 查询 (UDP 流量)
+        //    - 至此，返回 google.com 正确的 ip address.
+        //    - 使用 ip 匹配 rule, 还是未匹配任何 rule，继续走 proxy.
+        //    - 再次建立 TCP 连接, 使用 VMess 加密协议，发送请求数据以及随后的其他域名请求。
+
+        // https://medium.com/@TachyonDevel/%E6%BC%AB%E8%B0%88%E5%90%84%E7%A7%8D%E9%BB%91%E7%A7%91%E6%8A%80%E5%BC%8F-dns-%E6%8A%80%E6%9C%AF%E5%9C%A8%E4%BB%A3%E7%90%86%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%E5%BA%94%E7%94%A8-62c50e58cbd0
+        "rules": [
+            {
+                "type": "field",
+                "ip": [
+                    "8.8.4.4"
+                ],
+                "outboundTag": "proxy"
+            },
+            {
+                "type": "field",
+                "domain": [
+                    "geosite:category-ads",
+                    "www.baidu.com"
+                ],
+                "outboundTag": "block"
+            },
+            {
+                "type": "field",
+                "domain": [
+                    "geosite:cn"
+                ],
+                "outboundTag": "direct"
+            },
+            {
+                "type": "field",
+                "ip": [
+                    "geoip:cn",
+                    "geoip:private" // 似乎这个不需要？
+                ],
+                "outboundTag": "direct"
+            },
+            {
+                "type": "field",
+                "protocol":["bittorrent"],
+                "outboundTag": "direct"
+            }
+        ]
+    },
+    "inbounds": [
+        {
+            "protocol": "dokodemo-door",
+            "port": 1081, // 监听端口
+            "sniffing": {
+                "enabled": true,
+                "destOverride": ["http", "tls"]
+            },
+            "settings": {
+                "network": "tcp,udp",
+                "followRedirect": true // 这里要为 true 才能接受来自 iptables 的流量
+            }
+        },
+        {
+            "port": 1080, // 监听端口
+            "protocol": "socks", // 入口协议为 SOCKS 5
+            "sniffing": {
+                "enabled": true,
+                "destOverride": ["http", "tls"]
+            },
+            "settings": {
+                "auth": "noauth"  //socks的认证设置，noauth 代表不认证，由于 socks 通常在客户端使用，所以这里不认证
+            }
+        },
+        {
+            "port": 3128,
+            "protocol": "http",
+            "settings": {
+                "timeout": 0
+            }
+        }
+    ],
+    "outbounds": [
+        // 下面两个顺序不可以颠倒, 因为列表中的第一个元素作为主出站协议, 当路由匹配不存在或没有匹配成功时，
+        // 流量由主出站协议发出, 我们要确保主出站协议必须是 proxy.
+        {
+            "tag": "proxy",
+            "protocol": "vmess", // 出口协议
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "$targetip", // 服务器地址，请修改为你自己的服务器 IP 或域名
+                        "port": $v2ray_port,  // 服务器端口
+                        "users": [
+                            {
+                                "id": "$uuid",  // 用户 ID，必须与服务器端配置相同
+                                "alterId": 4 // 此处的值也应当与服务器相同
+                            }
+                        ]
+                    }
+                ],
+                // 默认是 AsIs, 不会使用 V2ray 内置的 DNS 服务器进行解析,
+                // 改为 UseIP, 表示使用 V2ray 内置 DNS 服务器将域名解析为 IP 之后再建立连接。
+                "domainStrategy": "UseIP"
+            },
+            "streamSettings": {
+                "network": "tcp",  // 这是默认值
+                "sockopt": {
+                    "tproxy": "redirect",
+                    "mark": 255
+                }
+            }
+        },
+        {
+            "tag": "direct",
+            "protocol": "freedom",
+            "streamSettings": {
+                "network": "tcp",  // 这是默认值
+                "sockopt": {
+                    "mark": 255
+                }
+            }
+        },
+        {
+            "tag": "block",
+            "protocol": "blackhole",
+            "settings": {
+                "response": {
+                    "type": "http"
+                }
+            }
+        }
+    ]
+}
+HEREDOC
+
+ss_port=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A20 |grep '"protocol" *: *"shadowsocks"' -A3 |grep '"port"' |grep -o '[0-9]*')
+ss_encrypt_method=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A30 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"method"'|cut -d':' -f2|cut -d'"' -f2)
+ss_password=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A30 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"password"'|cut -d':' -f2|cut -d'"' -f2)
+expose_port $ss_port
+
+echo "Your's shadowsocks port: [0m[33m${ss_port}[0m"
+echo "Your's shadowsocks encrypt method: [0m[33m${ss_encrypt_method}[0m"
+echo "Your's shadowsocks password: [0m[33m${ss_password}[0m"
