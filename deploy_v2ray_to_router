@@ -1,0 +1,131 @@
+#!/bin/bash
+
+ssh "$*" '[ -e /opt/etc/toggle_proxy.sh ] && /opt/etc/toggle_proxy.sh disable'
+
+set -e
+self="$(curl -sS -k https://raw.githubusercontent.com/zw963/deployment_bash/v0.5.3/deploy_start.sh)" && eval "$self"
+set +e
+
+export target=$1
+
+config=./router/opt/etc/v2ray.json
+
+if [ ! -e "$config" ];then
+    echo "Please create ${config} or generate it use deploy_v2ray+ss_to_vps before deploy to router."
+    exit
+fi
+
+copy "$config" /opt/etc/
+copy router/opt/etc/apply_iptables_rule.sh /opt/etc/
+copy router/opt/etc/clean_iptables_rule.sh /opt/etc
+copy router/opt/etc/toggle_proxy.sh /opt/etc
+copy router/opt/etc/enable_swap.sh /opt/etc
+copy router/opt/etc/patch_router /opt/etc
+
+deploy_start
+
+# --------------------------------------------------------------------------------
+#
+# Following script will be run on router, please change it to meet your's need.
+#
+# -------------------------------------------------------------------------------
+
+#
+# 如果第一次运行本脚本, 请务必初始化 entware 包管理系统.
+# ssh 登陆路由器, 执行 entware-setup.sh, 选择 1'
+
+if ! opkg update; then
+    echo 'Please initialise entware-ng if you run this first time.'
+    echo "e.g. plugin your's usb disk, and run \`entware-setup.sh', select 1."
+    echo "Run \`opkg update' failed."
+    exit
+else
+    opkg upgrade
+fi
+
+set -e
+
+v2ray_version=4.22.0
+# rm -f v2ray-linux-arm.zip
+# wget https://github.com/v2ray/v2ray-core/releases/download/v${v2ray_version}/v2ray-linux-arm.zip
+# mkdir -p v2ray && unzip v2ray-linux-arm.zip -d v2ray -o
+cd v2ray/ && rm *.sig && chmod +x v2ctl* v2ray*
+v2ray_commands=$(/opt/bin/find -maxdepth 1 -name 'v2ray_*')
+
+for v2ray_command in ./v2ray $v2ray_commands; do
+    if $v2ray_command -version; then
+        valid_v2ray_command=$v2ray_command
+        valid_v2ctl_command=$(echo $v2ray_command |sed 's#v2ray#v2ctl#')
+        break
+    else
+        valid_v2ray_command=
+    fi
+done
+
+if [  -z "$valid_v2ray_command" ]; then
+    echo 'Not valid v2ray version is supported by current router, please check if download correct version.'
+    exit
+else
+    $valid_v2ray_command -version
+fi
+
+cp $valid_v2ray_command $valid_v2ctl_command geoip.dat geosite.dat /opt/sbin/
+echo 'v2ray is installed'
+
+cat <<'HEREDOC' > /opt/etc/init.d/S22v2ray
+#!/bin/sh
+
+ENABLED=yes
+PROCS=v2ray
+ARGS="-config /opt/etc/v2ray.json"
+PREARGS=""
+DESC=$PROCS
+PATH=/opt/sbin:/opt/bin:/opt/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[ -z "$(which $PROCS)" ] && exit 0
+
+. /opt/etc/init.d/rc.func
+HEREDOC
+
+chmod +x /opt/etc/init.d/S22v2ray
+
+# ----------------------------------------------------
+#
+# 下面执行一些脚本检查与替换。
+#
+# ---------------------------------------------------
+
+cd /opt/etc
+chmod +x apply_iptables_rule.sh \
+      clean_iptables_rule.sh \
+      toggle_proxy.sh \
+      enable_swap.sh \
+      patch_router \
+      /jffs/scripts/services-start
+
+# ----------------------------------------------------
+#
+# 启动所需的脚本
+#
+# ---------------------------------------------------
+
+# 每隔 1 分钟检测下所有的服务是否运行.
+add_service wan-start 'cru a run-services "*/1 * * * *" "/jffs/scripts/services-start"'
+/jffs/scripts/wan-start
+
+# 打开swap
+echo 'Enabling swap'
+/opt/etc/enable_swap.sh
+add_service post-mount '/opt/etc/enable_swap.sh'
+
+# 如果 DHCP 重新分配 IP 地址时, 会清除 iptables rule, 此时重新应用 iptables
+add_service dhcpc-event '/opt/etc/apply_iptables_rule.sh'
+
+set +e
+/jffs/scripts/services-stop
+set -e
+/jffs/scripts/services-start
+
+# 在所有服务启动之后, 运行 /opt/etc/patch_router 为 dnsmasq 追加配置, 并重启 dnsmasq 服务.
+add_service services-start '[ -f /tmp/patch_router_is_run ] || /opt/etc/patch_router'
+/opt/etc/patch_router

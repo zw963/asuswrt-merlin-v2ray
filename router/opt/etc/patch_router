@@ -1,0 +1,8 @@
+#!/bin/sh
+
+chmod +x /opt/etc/init.d/S22v2ray
+/opt/etc/init.d/S22v2ray restart
+
+/opt/etc/toggle_proxy.sh enable
+
+touch /tmp/patch_router_is_run
