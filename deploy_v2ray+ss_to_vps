@@ -10,7 +10,7 @@ function postinstall () {
     scp root@$targetip:/etc/v2ray/client.json ./router/opt/etc/v2ray.json
 }
 
-if grep -qs -e 'set_yours_password_here' server.json; then
+if grep -qs -e 'set_ss_password_here' server.json; then
     echo 'v2ray server served as a shadowsocks server too.'
     echo "You must set shadowsocks server password in \`server/v2ray-server/server.json'!"
     exit
@@ -90,9 +90,12 @@ cat <<HEREDOC > /etc/v2ray/client.json
 
 {
     // "log": {
-    //     "loglevel": "debug"
+    //     "loglevel": "info"
     // },
     "dns": {
+        "hosts": {
+            // "baidu.com": "127.0.0.1"
+        },
         "servers": [
             {
                 "address": "localhost",
@@ -104,7 +107,7 @@ cat <<HEREDOC > /etc/v2ray/client.json
                     "geoip:cn"
                 ]
             },
-            "8.8.4.4"
+            "https://dns.google/dns-query"
         ]
     },
     "routing": {
@@ -118,8 +121,9 @@ cat <<HEREDOC > /etc/v2ray/client.json
         // 2. 访问 google.com
         //    - 如果没有匹配到任何 rule, 本来应该从 \`默认主出站协议' 发出(outbounds 里面的第一个，proxy)
         //    - 因为我们用了 IPIfNonMatch 策略, 如果不匹配，先尝试使用内置 DNS 解析域名的真实 IP。
-        //    - 内置 dns 中，localhost 无法匹配 google.com, 因此使用下一个匹配的 DNS, 这里是 8.8.4.4.
-        //    - 8.8.4.4 匹配第一条路由，因此直接走代理，避免做额外的检测。
+        //    - 内置 dns 中，localhost 无法匹配 google.com, 因此使用下一个匹配的 DNS, 这里是 DoH.
+        //    - 下一步，我们仍然需要决定，走什么线路来使用 DoH 获取期望的 ip, 再次进入路由查找。
+        //    - DoH 匹配第一条路由，因此直接走代理，避免做额外的检测。
         //    - proxy 和 VPS v2ray server 建立 TCP 连接, 并通过这个连接发送 DNS 查询 (UDP 流量)
         //    - 至此，返回 google.com 正确的 ip address.
         //    - 使用 ip 匹配 rule, 还是未匹配任何 rule，继续走 proxy.
@@ -129,16 +133,15 @@ cat <<HEREDOC > /etc/v2ray/client.json
         "rules": [
             {
                 "type": "field",
-                "ip": [
-                    "8.8.4.4"
+                "domain": [
+                    "dns.google"
                 ],
                 "outboundTag": "proxy"
             },
             {
                 "type": "field",
                 "domain": [
-                    "geosite:category-ads",
-                    "www.baidu.com"
+                    "geosite:category-ads"
                 ],
                 "outboundTag": "block"
             },
@@ -225,7 +228,8 @@ cat <<HEREDOC > /etc/v2ray/client.json
                     "tproxy": "redirect",
                     "mark": 255
                 }
-            }
+            },
+            "mux": {"enabled": true}
         },
         {
             "tag": "direct",
@@ -246,7 +250,8 @@ cat <<HEREDOC > /etc/v2ray/client.json
                 }
             }
         }
-    ]
+    ],
+    "policy": {}
 }
 HEREDOC
 

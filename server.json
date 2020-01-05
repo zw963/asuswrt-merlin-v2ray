@@ -4,6 +4,11 @@
         "error": "/var/log/v2ray/error.log",
         "loglevel": "warning"
     },
+    "dns": {
+        "servers": [
+            "https+local://dns.google/dns-query"
+        ]
+    },
     "inbounds": [
         {
             "protocol": "vmess",

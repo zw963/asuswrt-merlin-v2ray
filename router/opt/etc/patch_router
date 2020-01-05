@@ -1,8 +1,10 @@
 #!/bin/sh
 
+[ -t 1 ] || sleep 10
+
 chmod +x /opt/etc/init.d/S22v2ray
 /opt/etc/init.d/S22v2ray restart
 
 /opt/etc/toggle_proxy.sh enable
 
-touch /tmp/patch_router_is_run
+date "+%Y%m%d_%H:%M:%S" > /tmp/patch_router_was_run_at

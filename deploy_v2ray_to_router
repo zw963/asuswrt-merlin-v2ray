@@ -46,9 +46,9 @@ fi
 set -e
 
 v2ray_version=4.22.0
-# rm -f v2ray-linux-arm.zip
-# wget https://github.com/v2ray/v2ray-core/releases/download/v${v2ray_version}/v2ray-linux-arm.zip
-# mkdir -p v2ray && unzip v2ray-linux-arm.zip -d v2ray -o
+rm -f v2ray-linux-arm.zip
+wget https://github.com/v2ray/v2ray-core/releases/download/v${v2ray_version}/v2ray-linux-arm.zip
+mkdir -p v2ray && unzip v2ray-linux-arm.zip -d v2ray -o
 cd v2ray/ && rm *.sig && chmod +x v2ctl* v2ray*
 v2ray_commands=$(/opt/bin/find -maxdepth 1 -name 'v2ray_*')
 
@@ -127,5 +127,5 @@ set -e
 /jffs/scripts/services-start
 
 # 在所有服务启动之后, 运行 /opt/etc/patch_router 为 dnsmasq 追加配置, 并重启 dnsmasq 服务.
-add_service services-start '[ -f /tmp/patch_router_is_run ] || /opt/etc/patch_router'
+add_service services-start '[ -f /tmp/patch_router_was_run_at ] || /opt/etc/patch_router'
 /opt/etc/patch_router
