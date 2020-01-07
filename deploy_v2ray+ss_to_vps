@@ -1,18 +1,19 @@
 #!/bin/sh
 
 set -e
-self="$(curl https://raw.githubusercontent.com/zw963/deployment_bash/v0.5.3/deploy_start.sh)" && eval "$self"
+self="$(curl -sS -k https://raw.githubusercontent.com/zw963/deployment_bash/v0.5.5/deploy_start.sh)" && eval "$self"
 
 export target=$1
 
 function postinstall () {
     set -u
-    scp root@$targetip:/etc/v2ray/client.json ./router/opt/etc/v2ray.json
+    echo 'copy generated client.json into local machine.'
+    scp $target:/etc/v2ray/v2ray.json ./router/opt/etc/
 }
 
-if grep -qs -e 'set_ss_password_here' server.json; then
+if grep -qs -e 'set_yours_password_here' server.json; then
     echo 'v2ray server served as a shadowsocks server too.'
-    echo "You must set shadowsocks server password in \`server/v2ray-server/server.json'!"
+    echo "You must change \`[0m[33mset_yours_password_here[0m' to a NEW password in \`server/v2ray-server/server.json'!"
     exit
 fi
 
@@ -22,8 +23,17 @@ deploy_start
 
 # Following code is execute on remote VPS
 
-wget https://install.direct/go.sh
-bash go.sh
+# wget https://install.direct/go.sh
+# bash go.sh
+
+[ -f /etc/systemd/system/v2ray.service ] && systemctl stop v2ray
+
+v2ray_version=4.22.0
+mkdir -p /usr/bin/v2ray
+download_and_extract https://github.com/v2ray/v2ray-core/releases/download/v${v2ray_version}/v2ray-linux-arm.zip v2ray-v${v2ray_version}
+cd v2ray-v${v2ray_version} && rm *.sig && chmod +x v2ctl* v2ray* &&
+    cp v2ray v2ctl *.dat /usr/bin/v2ray &&
+    cp systemd/v2ray.service /etc/systemd/system
 
 uuid=$(uuidgen)
 
@@ -81,9 +91,14 @@ elif [[ $(cat /etc/issue) =~ Ubuntu|Mint|Deepin ]]; then
 fi
 
 v2ray_port=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A10 |grep '"protocol" *: *"vmess"' -A3 |grep '"port"' |grep -o '[0-9]*')
-expose_port $v2ray_port
+ss_port=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A3 |grep '"port"' |grep -o '[0-9]*')
+ss_encrypt_method=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"method"'|cut -d':' -f2|cut -d'"' -f2)
+ss_password=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"password"'|cut -d':' -f2|cut -d'"' -f2)
 
-cat <<HEREDOC > /etc/v2ray/client.json
+expose_port $v2ray_port
+expose_port $ss_port
+
+cat <<HEREDOC > /etc/v2ray/v2ray.json
 // 本脚本当运行 deploy_v2ray+ss_to_vps 时自动生成。
 // 本脚本可作为 普通 v2ray client 脚本，也可以作为 ASUS merlin 路由器透明代理 v2ray 脚本，
 // 运行 ./v2ray+dnsmasq+dnscrypt2 admin@router.asus.com 部署这个配置文件到路由器。
@@ -223,7 +238,14 @@ cat <<HEREDOC > /etc/v2ray/client.json
                 "domainStrategy": "UseIP"
             },
             "streamSettings": {
-                "network": "tcp",  // 这是默认值
+                "network": "quic",  // 默认值是 tcp
+                "quicSettings": {
+                    "security": "chacha20-poly1305",
+                    "key": "${ss_password}",
+                    "header": {
+                        "type": "wechat-video"
+                    }
+                },
                 "sockopt": {
                     "tproxy": "redirect",
                     "mark": 255
@@ -254,11 +276,6 @@ cat <<HEREDOC > /etc/v2ray/client.json
     "policy": {}
 }
 HEREDOC
-
-ss_port=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A20 |grep '"protocol" *: *"shadowsocks"' -A3 |grep '"port"' |grep -o '[0-9]*')
-ss_encrypt_method=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A30 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"method"'|cut -d':' -f2|cut -d'"' -f2)
-ss_password=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A30 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"password"'|cut -d':' -f2|cut -d'"' -f2)
-expose_port $ss_port
 
 echo "Your's shadowsocks port: [0m[33m${ss_port}[0m"
 echo "Your's shadowsocks encrypt method: [0m[33m${ss_encrypt_method}[0m"
