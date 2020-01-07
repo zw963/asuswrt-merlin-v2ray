@@ -1,6 +1,5 @@
 #!/bin/sh
 
-set -e
 self="$(curl -sS -k https://raw.githubusercontent.com/zw963/deployment_bash/v0.5.5/deploy_start.sh)" && eval "$self"
 
 export target=$1
@@ -21,6 +20,8 @@ copy server.json /etc/v2ray/config.json
 
 deploy_start
 
+set -eu
+
 # Following code is execute on remote VPS
 
 # wget https://install.direct/go.sh
@@ -29,10 +30,30 @@ deploy_start
 [ -f /etc/systemd/system/v2ray.service ] && systemctl stop v2ray
 
 v2ray_version=4.22.0
+arch=linux-64
+
 mkdir -p /usr/bin/v2ray
-download_and_extract https://github.com/v2ray/v2ray-core/releases/download/v${v2ray_version}/v2ray-linux-arm.zip v2ray-v${v2ray_version}
-cd v2ray-v${v2ray_version} && rm *.sig && chmod +x v2ctl* v2ray* &&
-    cp v2ray v2ctl *.dat /usr/bin/v2ray &&
+download_and_extract https://github.com/v2ray/v2ray-core/releases/download/v${v2ray_version}/v2ray-${arch}.zip v2ray-v${v2ray_version}
+cd v2ray-v${v2ray_version} && rm *.sig && chmod +x v2ctl* v2ray*
+
+v2ray_commands=$(find -maxdepth 1 -name 'v2ray_*')
+
+for v2ray_command in ./v2ray $v2ray_commands; do
+    if $v2ray_command -version &>/dev/null; then
+        valid_v2ray_command=$v2ray_command
+        valid_v2ctl_command=$(echo $v2ray_command |sed 's#v2ray#v2ctl#')
+        break
+    else
+        valid_v2ray_command=
+    fi
+done
+
+if [  -z "$valid_v2ray_command" ]; then
+    echo 'Not valid v2ray version is supported by current router, please check if download correct version.'
+    exit
+else
+    $valid_v2ray_command -version
+fi && cp v2ray v2ctl *.dat /usr/bin/v2ray &&
     cp systemd/v2ray.service /etc/systemd/system
 
 uuid=$(uuidgen)
@@ -98,6 +119,7 @@ ss_password=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A100 |grep '"protoc
 expose_port $v2ray_port
 expose_port $ss_port
 
+set -u
 cat <<HEREDOC > /etc/v2ray/v2ray.json
 // 本脚本当运行 deploy_v2ray+ss_to_vps 时自动生成。
 // 本脚本可作为 普通 v2ray client 脚本，也可以作为 ASUS merlin 路由器透明代理 v2ray 脚本，
@@ -280,3 +302,4 @@ HEREDOC
 echo "Your's shadowsocks port: [0m[33m${ss_port}[0m"
 echo "Your's shadowsocks encrypt method: [0m[33m${ss_encrypt_method}[0m"
 echo "Your's shadowsocks password: [0m[33m${ss_password}[0m"
+echo 'Congratulations, Deploy succssful!'
