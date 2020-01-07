@@ -22,7 +22,11 @@ deploy_start
 
 set -eu
 
-# Following code is execute on remote VPS
+# --------------------------------------------------------------------------------
+#
+# Following script will be run on remote VPS, please change it to meet your's need.
+#
+# -------------------------------------------------------------------------------
 
 # wget https://install.direct/go.sh
 # bash go.sh

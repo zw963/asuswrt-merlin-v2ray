@@ -2,9 +2,7 @@
 
 ssh "$*" '[ -e /opt/etc/toggle_proxy.sh ] && /opt/etc/toggle_proxy.sh disable'
 
-set -e
-self="$(curl -sS -k https://raw.githubusercontent.com/zw963/deployment_bash/v0.5.3/deploy_start.sh)" && eval "$self"
-set +e
+self="$(curl -sS -k https://raw.githubusercontent.com/zw963/deployment_bash/v0.5.5/deploy_start.sh)" && eval "$self"
 
 export target=$1
 
@@ -24,6 +22,8 @@ copy router/opt/etc/patch_router /opt/etc
 
 deploy_start
 
+set -eu
+
 # --------------------------------------------------------------------------------
 #
 # Following script will be run on router, please change it to meet your's need.
@@ -34,26 +34,22 @@ deploy_start
 # 如果第一次运行本脚本, 请务必初始化 entware 包管理系统.
 # ssh 登陆路由器, 执行 entware-setup.sh, 选择 1'
 
-if ! opkg update; then
+if ! opkg --version; then
     echo 'Please initialise entware-ng if you run this first time.'
     echo "e.g. plugin your's usb disk, and run \`entware-setup.sh', select 1."
     echo "Run \`opkg update' failed."
     exit
-else
-    opkg upgrade
 fi
 
-set -e
-
 v2ray_version=4.22.0
-rm -f v2ray-linux-arm.zip
-wget https://github.com/v2ray/v2ray-core/releases/download/v${v2ray_version}/v2ray-linux-arm.zip
-mkdir -p v2ray && unzip v2ray-linux-arm.zip -d v2ray -o
-cd v2ray/ && rm *.sig && chmod +x v2ctl* v2ray*
+arch=linux-arm
+
+download_and_extract https://github.com/v2ray/v2ray-core/releases/download/v${v2ray_version}/v2ray-${arch}.zip v2ray-v${v2ray_version}
+cd v2ray-v${v2ray_version} && rm *.sig && chmod +x v2ctl* v2ray*
 v2ray_commands=$(/opt/bin/find -maxdepth 1 -name 'v2ray_*')
 
 for v2ray_command in ./v2ray $v2ray_commands; do
-    if $v2ray_command -version; then
+    if $v2ray_command -version &>/dev/null; then
         valid_v2ray_command=$v2ray_command
         valid_v2ctl_command=$(echo $v2ray_command |sed 's#v2ray#v2ctl#')
         break
@@ -67,9 +63,7 @@ if [  -z "$valid_v2ray_command" ]; then
     exit
 else
     $valid_v2ray_command -version
-fi
-
-cp $valid_v2ray_command $valid_v2ctl_command geoip.dat geosite.dat /opt/sbin/
+fi && cp $valid_v2ray_command $valid_v2ctl_command *.dat /opt/sbin/
 echo 'v2ray is installed'
 
 cat <<'HEREDOC' > /opt/etc/init.d/S22v2ray
@@ -129,3 +123,5 @@ set -e
 # 在所有服务启动之后, 运行 /opt/etc/patch_router 为 dnsmasq 追加配置, 并重启 dnsmasq 服务.
 add_service services-start '[ -f /tmp/patch_router_was_run_at ] || /opt/etc/patch_router'
 /opt/etc/patch_router
+
+echo 'Congratulations, Deploy succssful!'
