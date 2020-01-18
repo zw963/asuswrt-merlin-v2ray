@@ -1,12 +1,13 @@
 #!/bin/sh
 
 self="$(curl -sS -k https://raw.githubusercontent.com/zw963/deployment_bash/v0.5.5/deploy_start.sh)" && eval "$self"
+# self="$(cat ~/Project/deployment_bash/deploy_start.sh)" && eval "$self"
 
 export target=$1
 
 function postinstall () {
     set -u
-    echo 'copy generated client.json into local machine.'
+    echo 'copy generated client v2ray.json into local machine.'
     scp $target:/etc/v2ray/v2ray.json ./router/opt/etc/
 }
 
@@ -33,7 +34,9 @@ set -eu
 
 [ -f /etc/systemd/system/v2ray.service ] && systemctl stop v2ray
 
-v2ray_version=4.22.0
+package compile-tools
+
+v2ray_version=4.22.1
 arch=linux-64
 
 mkdir -p /usr/bin/v2ray
@@ -105,15 +108,9 @@ sysctl -p > /dev/null
 
 mkdir -p /var/log/v2ray
 
-if [[ -e /etc/redhat-release && $(cat /etc/redhat-release) =~ CentOS ]]; then
-    systemctl enable v2ray
-    systemctl restart v2ray
-    systemctl status v2ray
-elif [[ $(cat /etc/issue) =~ Ubuntu|Mint|Deepin ]]; then
-    systemctl enable v2ray
-    systemctl restart v2ray
-    systemctl status v2ray
-fi
+systemctl enable v2ray
+systemctl restart v2ray
+systemctl status v2ray
 
 v2ray_port=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A10 |grep '"protocol" *: *"vmess"' -A3 |grep '"port"' |grep -o '[0-9]*')
 ss_port=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A3 |grep '"port"' |grep -o '[0-9]*')
