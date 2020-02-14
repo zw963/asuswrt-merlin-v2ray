@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ssh "$*" '[ -e /opt/etc/toggle_proxy.sh ] && /opt/etc/toggle_proxy.sh disable'
+ssh "$*" '[ -f /opt/etc/toggle_proxy.sh ] && /opt/etc/toggle_proxy.sh disable'
 
 self="$(curl -sS -k https://raw.githubusercontent.com/zw963/deployment_bash/v0.5.5/deploy_start.sh)" && eval "$self"
 
@@ -41,7 +41,7 @@ if ! opkg --version; then
     exit
 fi
 
-v2ray_version=4.22.0
+v2ray_version=4.22.1
 arch=linux-arm
 
 download_and_extract https://github.com/v2ray/v2ray-core/releases/download/v${v2ray_version}/v2ray-${arch}.zip v2ray-v${v2ray_version}
@@ -105,6 +105,9 @@ chmod +x apply_iptables_rule.sh \
 
 # 每隔 1 分钟检测下所有的服务是否运行.
 add_service wan-start 'cru a run-services "*/1 * * * *" "/jffs/scripts/services-start"'
+# 每隔 3 分钟检测下 iptables 是否失效.
+add_service wan-start 'cru a run-iptables "*/3 * * * *" "/opt/etc/apply_iptables_rule.sh"'
+
 /jffs/scripts/wan-start
 
 # 打开swap

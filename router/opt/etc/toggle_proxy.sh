@@ -4,7 +4,7 @@
 # 因为即使关闭透明代理，仍可以通过浏览器插件使用 v2ray 的 socks 代理或 http 代理服务。
 
 function disable_proxy () {
-    echo '[0m[33mDisable proxy ...[0m'
+    echo '[0m[33mDisabling proxy ...[0m'
 
     /opt/etc/clean_iptables_rule.sh && chmod -x /opt/etc/apply_iptables_rule.sh
 
@@ -12,7 +12,7 @@ function disable_proxy () {
 }
 
 function enable_proxy () {
-    echo '[0m[33mEnable proxy ...[0m'
+    echo '[0m[33mEnabling proxy ...[0m'
 
     chmod +x /opt/etc/apply_iptables_rule.sh && /opt/etc/apply_iptables_rule.sh
 

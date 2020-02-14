@@ -1,12 +1,14 @@
 #!/bin/sh
 
-/opt/etc/clean_iptables_rule.sh
-
-echo '[0m[33mApply iptables rule ...[0m'
+if [ -t 1 ]; then
+    /opt/etc/clean_iptables_rule.sh
+fi
 
 if iptables -t nat -C PREROUTING -p tcp -j V2RAY_TCP 2>/dev/null; then
     exit 0
 fi
+
+echo '[0m[33mApplying iptables rule ...[0m'
 
 ipset_protocal_version=$(ipset -v |grep -o 'version.*[0-9]' |head -n1 |cut -d' ' -f2)
 
@@ -59,4 +61,4 @@ if modprobe xt_TPROXY &>/dev/null; then
     iptables -t mangle -A PREROUTING -j V2RAY_UDP
 fi
 
-echo '[0m[33mApply iptables rule done.[0m'
+echo '[0m[33mDone apply iptables rule.[0m'
