@@ -13,7 +13,7 @@ function postinstall () {
 
 if grep -qs -e 'set_yours_password_here' server.json; then
     echo 'v2ray server served as a shadowsocks server too.'
-    echo "You must change \`[0m[33mset_yours_password_here[0m' to a NEW password in \`server/v2ray-server/server.json'!"
+    echo "You must set \`[0m[33mset_yours_password_here[0m' to a NEW password in \`./server.json'!"
     exit
 fi
 
@@ -268,8 +268,6 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             "streamSettings": {
                 "network": "quic",  // 默认值是 tcp
                 "quicSettings": {
-                    "security": "chacha20-poly1305",
-                    "key": "${ss_password}",
                     "header": {
                         "type": "wechat-video"
                     }

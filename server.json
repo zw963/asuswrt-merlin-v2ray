@@ -17,16 +17,13 @@
                 "clients": [
                     {
                         "id": "NEWUUID",
-                        "alterId": 4,
-                        "security": "none" // set none only if use quic
+                        "alterId": 4
                     }
                 ]
             },
             "streamSettings": {
                 "network": "quic",
                 "quicSettings": {
-                    "security": "chacha20-poly1305",
-                    "key": "set_yours_password_here",
                     "header": {
                         "type": "wechat-video"
                     }
