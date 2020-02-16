@@ -20,6 +20,15 @@ copy router/opt/etc/toggle_proxy.sh /opt/etc
 copy router/opt/etc/enable_swap.sh /opt/etc
 copy router/opt/etc/patch_router /opt/etc
 
+if [ -d predownloaded_binary ] && zip_file=$(ls -1 predownloaded_binary/*.zip |head -n1); then
+    echo "Copy predownloaded binary to router, if you don't want to use it,
+Or binary not worked for you, please remove predownloaded_binary folder or
+override with yours's bianry."
+    copy predownloaded_binary/v2ray-linux-arm.zip predownloaded_binary/
+else
+    ssh "$*" "rm -rf predownloaded_binary"
+fi
+
 deploy_start
 
 set -eu
@@ -44,8 +53,13 @@ fi
 v2ray_version=4.22.1
 arch=linux-arm
 
-download_and_extract https://github.com/v2ray/v2ray-core/releases/download/v${v2ray_version}/v2ray-${arch}.zip v2ray-v${v2ray_version}
-cd v2ray-v${v2ray_version} && rm *.sig && chmod +x v2ctl* v2ray*
+if [ -d predownloaded_binary ]; then
+    cd predownloaded_binary
+    unzip -o *.zip
+else
+    download_and_extract https://github.com/v2ray/v2ray-core/releases/download/v${v2ray_version}/v2ray-${arch}.zip v2ray-v${v2ray_version}
+    cd v2ray-v${v2ray_version} && rm -f *.sig && chmod +x v2ctl* v2ray*
+fi
 v2ray_commands=$(/opt/bin/find -maxdepth 1 -name 'v2ray_*')
 
 for v2ray_command in ./v2ray $v2ray_commands; do
