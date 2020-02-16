@@ -43,6 +43,22 @@
         {
             "protocol": "freedom",
             "settings": {}
+        },
+        {
+            "tag": "block",
+            "protocol": "blackhole",
+            "settings": {}
         }
-    ]
+    ],
+    "routing": {
+        "rules": [
+            {
+                "type": "field",
+                "ip": [
+                    "geoip:private"
+                ],
+                "outboundTag": "block"
+            }
+        ]
+    }
 }

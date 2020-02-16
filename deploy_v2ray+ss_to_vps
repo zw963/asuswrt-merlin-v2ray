@@ -205,7 +205,9 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             },
             {
                 "type": "field",
-                "protocol":["bittorrent"],
+                "protocol":[
+                    "bittorrent"
+                ],
                 "outboundTag": "direct"
             }
         ]
@@ -216,7 +218,10 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             "port": 1081, // 监听端口
             "sniffing": {
                 "enabled": true,
-                "destOverride": ["http", "tls"]
+                "destOverride": [
+                    "http",
+                    "tls"
+                ]
             },
             "settings": {
                 "network": "tcp,udp",
@@ -228,7 +233,10 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             "port": 1080, // 监听端口
             "sniffing": {
                 "enabled": true,
-                "destOverride": ["http", "tls"]
+                "destOverride": [
+                    "http",
+                    "tls"
+                ]
             },
             "settings": {
                 "auth": "noauth"  //socks的认证设置，noauth 代表不认证，由于 socks 通常在客户端使用，所以这里不认证
