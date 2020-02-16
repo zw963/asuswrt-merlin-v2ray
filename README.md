@@ -32,8 +32,13 @@ Please finish prerequisites steps before do this.
 
 Assume your's linux VPS is 34.80.108.8, your's router is 192.168.50.1
 
-1. ./deploy_v2ray+ss_to_vps root@34.80.108.8, wait run successful.
-2. ./deploy_v2ray_to_router admin@192.168.50.1, wait run successful.
+1) ./deploy_v2ray+ss_to_vps root@34.80.108.8, wait run successful.
+
+2) ./deploy_v2ray_to_router admin@192.168.50.1, wait run successful.
+
+If you see following error issue, please run it again and again ..... again, until it successful.
+
+![error_msg](/image.png)
 
 Done.
 
