@@ -145,7 +145,12 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                     "geoip:cn"
                 ]
             },
-            "https://dns.google/dns-query"
+            {
+                "address": "https://dns.google/dns-query",
+                "domains": [
+                    "geosite:geolocation-!cn"
+                ]
+            }
         ]
     },
     "routing": {
@@ -219,8 +224,8 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             }
         },
         {
-            "port": 1080, // 监听端口
             "protocol": "socks", // 入口协议为 SOCKS 5
+            "port": 1080, // 监听端口
             "sniffing": {
                 "enabled": true,
                 "destOverride": ["http", "tls"]
@@ -230,8 +235,8 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             }
         },
         {
-            "port": 3128,
             "protocol": "http",
+            "port": 3128,
             "settings": {
                 "timeout": 0
             }
