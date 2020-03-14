@@ -10,16 +10,19 @@ done
 iptables -t nat -F V2RAY_TCP 2>/dev/null          # flush
 iptables -t nat -X V2RAY_TCP 2>/dev/null          # --delete-chain
 
-while iptables -t mangle -C PREROUTING -p udp -j V2RAY_UDP 2>/dev/null; do
-    iptables -t mangle -D PREROUTING -p udp -j V2RAY_UDP
+while iptables -t mangle -C PREROUTING -j V2RAY_UDP 2>/dev/null; do
+    iptables -t mangle -D PREROUTING -j V2RAY_UDP
 done
 iptables -t mangle -F V2RAY_UDP 2>/dev/null          # flush
 iptables -t mangle -X V2RAY_UDP 2>/dev/null          # --delete-chain
 
-while iptables -t mangle -C PREROUTING -p udp -j V2RAY_MARK 2>/dev/null; do
-    iptables -t mangle -D PREROUTING -p udp -j V2RAY_MARK
+while iptables -t mangle -C PREROUTING -j V2RAY_MARK 2>/dev/null; do
+    iptables -t mangle -D PREROUTING -j V2RAY_MARK
 done
 iptables -t mangle -F V2RAY_MARK 2>/dev/null          # flush
 iptables -t mangle -X V2RAY_MARK 2>/dev/null          # --delete-chain
+
+ip route del local default dev lo table 100 2>/dev/null
+ip rule del fwmark 1 table 100 2>/dev/null
 
 echo '[0m[33mDone clean iptables rule.[0m'
