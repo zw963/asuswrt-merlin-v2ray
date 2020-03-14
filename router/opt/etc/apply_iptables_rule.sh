@@ -25,8 +25,9 @@ if [ -z "$local_v2ray_port" ]; then
     exit
 fi
 
+v2ray_server_ip=$( cat /opt/etc/v2ray.json |grep 'protocol":\s*\"vmess' -A10 |grep '"address"'|cut -d: '-f2'|cut -d'"' -f2)
+
 LOCAL_IPS="
-***REMOVED***
 0.0.0.0/8
 10.0.0.0/8
 127.0.0.0/8
@@ -41,6 +42,8 @@ iptables -t nat -N V2RAY_TCP
 for local_ip in $LOCAL_IPS; do
     iptables -t nat -A V2RAY_TCP -d $local_ip -j RETURN
 done
+iptables -t nat -A V2RAY_TCP -d $v2ray_server_ip -j RETURN
+
 iptables -t nat -A V2RAY_TCP -p tcp -j RETURN -m mark --mark 0xff
 iptables -t nat -A V2RAY_TCP -p tcp -j REDIRECT --to-ports $local_v2ray_port
 # apply rule
@@ -53,9 +56,11 @@ if modprobe xt_TPROXY &>/dev/null; then
     ip route add local default dev lo table 100
 
     iptables -t mangle -N V2RAY_UDP
+
     for local_ip in $LOCAL_IPS; do
         iptables -t mangle -A V2RAY_UDP -d $local_ip -j RETURN
     done
+    iptables -t mangle -A V2RAY_UDP -d $v2ray_server_ip -j RETURN
     iptables -t mangle -A V2RAY_UDP -p udp -j TPROXY --on-port $local_v2ray_port --tproxy-mark 1
     # Apply the rules
     iptables -t mangle -A PREROUTING -j V2RAY_UDP
