@@ -21,10 +21,8 @@ copy router/opt/etc/enable_swap.sh /opt/etc
 copy router/opt/etc/patch_router /opt/etc
 
 if [ -d predownloaded_binary ] && zip_file=$(ls -1 predownloaded_binary/*.zip |head -n1); then
-    echo "Copy predownloaded binary to router, if you don't want to use it,
-Or binary not worked for you, please remove predownloaded_binary folder or
-override with yours's bianry."
-    copy predownloaded_binary/v2ray-linux-arm.zip predownloaded_binary/
+    echo 'Copy predownloaded binary to router ...'
+    copy predownloaded_binary/v2ray-linux-arm.zip predownloaded_binary/v2ray-linux-arm.zip
 else
     ssh "$*" "rm -rf predownloaded_binary"
 fi
@@ -46,7 +44,7 @@ set -eu
 if ! opkg --version; then
     echo 'Please initialise entware-ng if you run this first time.'
     echo "e.g. plugin your's usb disk, and run \`entware-setup.sh', select 1."
-    echo "Run \`opkg update' failed."
+    echo "Run \`opkg --version' failed."
     exit
 fi
 
@@ -54,8 +52,7 @@ v2ray_version=4.22.1
 arch=linux-arm
 
 if [ -d predownloaded_binary ]; then
-    cd predownloaded_binary
-    unzip -o *.zip
+    cd predownloaded_binary && unzip -o *.zip && chmod +x v2ctl* v2ray*
 else
     download_and_extract https://github.com/v2ray/v2ray-core/releases/download/v${v2ray_version}/v2ray-${arch}.zip v2ray-v${v2ray_version}
     cd v2ray-v${v2ray_version} && rm -f *.sig && chmod +x v2ctl* v2ray*
@@ -124,10 +121,11 @@ add_service wan-start 'cru a run-iptables "*/3 * * * *" "/opt/etc/apply_iptables
 
 /jffs/scripts/wan-start
 
+# Because newest asus merlin introduce AMPM, please enable swap file there if need it.
 # 打开swap
-echo 'Enabling swap'
-/opt/etc/enable_swap.sh
-add_service post-mount '/opt/etc/enable_swap.sh'
+# echo 'Enabling swap'
+# /opt/etc/enable_swap.sh
+# add_service post-mount '/opt/etc/enable_swap.sh'
 
 # 如果 DHCP 重新分配 IP 地址时, 会清除 iptables rule, 此时重新应用 iptables
 add_service dhcpc-event '/opt/etc/apply_iptables_rule.sh'
