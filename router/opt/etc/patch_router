@@ -3,6 +3,7 @@
 [ -t 1 ] || sleep 10
 
 chmod +x /opt/etc/init.d/S22v2ray
+mkdir -p /var/log/v2ray/
 /opt/etc/init.d/S22v2ray restart
 
 /opt/etc/toggle_proxy.sh enable

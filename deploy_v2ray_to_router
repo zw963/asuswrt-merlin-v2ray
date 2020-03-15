@@ -19,6 +19,7 @@ copy router/opt/etc/clean_iptables_rule.sh /opt/etc
 copy router/opt/etc/toggle_proxy.sh /opt/etc
 copy router/opt/etc/enable_swap.sh /opt/etc
 copy router/opt/etc/patch_router /opt/etc
+copy router/opt/etc/restart_dnsmasq /opt/etc
 
 if [ -d predownloaded_binary ] && zip_file=$(ls -1 predownloaded_binary/*.zip |head -n1); then
     echo 'Copy predownloaded binary to router ...'
@@ -46,6 +47,25 @@ if ! opkg --version; then
     echo "e.g. plugin your's usb disk, and run \`entware-setup.sh', select 1."
     echo "Run \`opkg --version' failed."
     exit
+fi
+
+if [ ! -e /jffs/scripts/services-start ]; then
+    cat <<'HEREDOC' > /jffs/scripts/services-start
+#!/bin/sh
+
+RC='/opt/etc/init.d/rc.unslung'
+
+i=30
+until [ -x "$RC" ] ; do
+  i=$(($i-1))
+  if [ "$i" -lt 1 ] ; then
+    logger "Could not start Entware"
+    exit
+  fi
+  sleep 1
+done
+$RC start
+HEREDOC
 fi
 
 v2ray_version=4.22.1

@@ -40,6 +40,62 @@ If you see following error issue, please run it again and again ..... again, unt
 
 ![error_msg](/image.png)
 
+A success deploy on router looking like this.
+
+```sh
+$   ./deploy_v2ray_to_router admin@192.168.50.1
+Disabling proxy ...
+Cleaning iptables rule ...
+Done clean iptables rule.
+Proxy is disabled.
+v2ray.json                                                                                                                                                  100% 7461   445.2KB/s   00:00
+apply_iptables_rule.sh                                                                                                                                      100% 1940   199.6KB/s   00:00
+clean_iptables_rule.sh                                                                                                                                      100% 1072   187.4KB/s   00:00
+toggle_proxy.sh                                                                                                                                             100% 1583   234.8KB/s   00:00
+enable_swap.sh                                                                                                                                              100%  482    59.9KB/s   00:00
+patch_router                                                                                                                                                100%  214    40.9KB/s   00:00
+restart_dnsmasq                                                                                                                                             100%   84    16.8KB/s   00:00
+Copy predownloaded binary to router ...
+v2ray-linux-arm.zip                                                                                                                                         100%   25MB   5.6MB/s   00:04
+***********************************************************
+Remote deploy scripts is started !!
+***********************************************************
+opkg version dcbc142e51f5f5f2fb9e4e44657e013d3c36a52b (2019-06-14)
+Archive:  v2ray-linux-arm.zip
+  inflating: config.json
+  inflating: doc/readme.md
+  inflating: geoip.dat
+  inflating: geosite.dat
+  inflating: systemd/v2ray.service
+  inflating: systemv/v2ray
+  inflating: v2ctl
+  inflating: v2ctl.sig
+  inflating: v2ctl_armv7
+  inflating: v2ctl_armv7.sig
+  inflating: v2ray
+  inflating: v2ray.sig
+  inflating: v2ray_armv6
+  inflating: v2ray_armv6.sig
+  inflating: v2ray_armv7
+  inflating: v2ray_armv7.sig
+  inflating: vpoint_socks_vmess.json
+  inflating: vpoint_vmess_freedom.json
+V2Ray 4.22.1 (V2Fly, a community-driven edition of V2Ray.) Custom (go1.13 linux/arm)
+A unified platform for anti-censorship.
+v2ray is installed
+ Checking v2ray...              dead.
+ Checking haveged...              alive.
+ Shutting down haveged...              done.
+ Starting haveged...              done.
+ Starting v2ray...              done.
+ Shutting down v2ray...              done.
+ Starting v2ray...              done.
+Enabling proxy ...
+dnsmasq: syntax check OK.
+Proxy is enabled.
+Congratulations, Deploy succssful!
+```
+
 Done.
 
 ## Contributing

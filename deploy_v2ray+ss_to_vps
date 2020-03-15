@@ -7,13 +7,15 @@ export target=$1
 
 function postinstall () {
     set -u
-    echo 'copy generated client v2ray.json into local machine.'
+    echo
+    echo 'Please wait copy generated client v2ray.json into local machine ...'
     scp $target:/etc/v2ray/v2ray.json ./router/opt/etc/
+    echo 'Run ./deploy_v2ray_to_router admin@192.168.50.1 to deploy to router.'
 }
 
 if grep -qs -e 'set_yours_password_here' server.json; then
     echo 'v2ray server served as a shadowsocks server too.'
-    echo "You must set \`[0m[33mset_yours_password_here[0m' to a NEW password in \`./server.json'!"
+    echo "You must change \`[0m[33mset_yours_password_here[0m' to a NEW password in \`./server.json'!"
     exit
 fi
 
@@ -176,8 +178,23 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
         "rules": [
             {
                 "type": "field",
+                "inboundTag": "dns-inbound",
+                "outboundTag": "dns-outbound"
+            },
+            {
+                "type": "field",
                 "domain": [
                     "dns.google"
+                ],
+                "outboundTag": "proxy"
+            },
+            {
+                "type": "field",
+                "ip": [
+                    "8.8.8.8/32",
+                    "8.8.4.4/32",
+                    "1.1.1.1/32",
+                    "1.0.0.1/32"
                 ],
                 "outboundTag": "proxy"
             },
@@ -226,6 +243,16 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             "settings": {
                 "network": "tcp,udp",
                 "followRedirect": true // 这里要为 true 才能接受来自 iptables 的流量
+            }
+        },
+        {
+            "protocol": "dokodemo-door",
+            "port": 65053,
+            "tag": "dns-inbound",
+            "settings": {
+                "address": "8.8.4.4",
+                "port": 53,
+                "network": "tcp,udp"
             }
         },
         {
@@ -286,6 +313,14 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                 }
             },
             "mux": {"enabled": true}
+        },
+        {
+            "tag": "dns-outbound",
+            "protocol": "dns",
+            "settings": {
+                "address": "8.8.4.4",
+                "port": 53
+            }
         },
         {
             "tag": "direct",
