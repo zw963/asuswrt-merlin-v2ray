@@ -12,7 +12,7 @@ function disable_proxy () {
 
     if [ -d "$dnsmasq_dir" ]; then
         rm -f $dnsmasq_dir/v2ray.conf
-        chmod +x /opt/etc/restart_dnsmasq && /opt/etc/restart_dnsmasq
+        chmod +x /opt/etc/restart_dnsmasq.sh && /opt/etc/restart_dnsmasq.sh
     fi
 
     echo '[0m[33mProxy is disabled.[0m'
@@ -37,7 +37,7 @@ function enable_proxy () {
     # fi
 
     echo 'server=/#/127.0.0.1#65053' > $dnsmasq_dir/v2ray.conf
-    chmod +x /opt/etc/restart_dnsmasq && /opt/etc/restart_dnsmasq
+    chmod +x /opt/etc/restart_dnsmasq.sh && /opt/etc/restart_dnsmasq.sh
 
     echo '[0m[33mProxy is enabled.[0m'
 }

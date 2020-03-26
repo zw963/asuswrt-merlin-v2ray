@@ -54,7 +54,7 @@ clean_iptables_rule.sh                                                          
 toggle_proxy.sh                                                                                                                                             100% 1583   234.8KB/s   00:00
 enable_swap.sh                                                                                                                                              100%  482    59.9KB/s   00:00
 patch_router                                                                                                                                                100%  214    40.9KB/s   00:00
-restart_dnsmasq                                                                                                                                             100%   84    16.8KB/s   00:00
+restart_dnsmasq.sh                                                                                                                                   100%   84    16.8KB/s   00:00
 Copy predownloaded binary to router ...
 v2ray-linux-arm.zip                                                                                                                                         100%   25MB   5.6MB/s   00:04
 ***********************************************************

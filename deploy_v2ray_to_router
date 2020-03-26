@@ -19,7 +19,8 @@ copy router/opt/etc/clean_iptables_rule.sh /opt/etc
 copy router/opt/etc/toggle_proxy.sh /opt/etc
 copy router/opt/etc/enable_swap.sh /opt/etc
 copy router/opt/etc/patch_router /opt/etc
-copy router/opt/etc/restart_dnsmasq /opt/etc
+copy router/opt/etc/restart_dnsmasq.sh /opt/etc
+copy router/opt/etc/update_geosite.sh /opt/etc
 
 if [ -d predownloaded_binary ] && zip_file=$(ls -1 predownloaded_binary/*.zip |head -n1); then
     echo 'Copy predownloaded binary to router ...'
@@ -126,6 +127,7 @@ chmod +x apply_iptables_rule.sh \
       toggle_proxy.sh \
       enable_swap.sh \
       patch_router \
+      update_geosite.sh \
       /jffs/scripts/services-start
 
 # ----------------------------------------------------
@@ -138,6 +140,8 @@ chmod +x apply_iptables_rule.sh \
 add_service wan-start 'cru a run-services "*/1 * * * *" "/jffs/scripts/services-start"'
 # 每隔 3 分钟检测下 iptables 是否失效.
 add_service wan-start 'cru a run-iptables "*/3 * * * *" "/opt/etc/apply_iptables_rule.sh"'
+# 每个 2 天升级一次
+add_service wan-start 'cru a update_geosites "* * */2 * *" "/opt/etc/update_geosite.sh"'
 
 /jffs/scripts/wan-start
 
