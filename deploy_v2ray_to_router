@@ -141,7 +141,8 @@ add_service wan-start 'cru a run-services "*/1 * * * *" "/jffs/scripts/services-
 # 每隔 3 分钟检测下 iptables 是否失效.
 add_service wan-start 'cru a run-iptables "*/3 * * * *" "/opt/etc/apply_iptables_rule.sh"'
 # 每个 2 天升级一次
-add_service wan-start 'cru a update_geosites "* * */2 * *" "/opt/etc/update_geosite.sh"'
+# FIXME: newest dlc.dat in domain-list-community not work well with current version V2Ray.
+# add_service wan-start 'cru a update_geosites "* * */2 * *" "/opt/etc/update_geosite.sh"'
 
 /jffs/scripts/wan-start
 
