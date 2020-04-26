@@ -342,7 +342,13 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             }
         }
     ],
-    "policy": {}
+    "policy": {
+        "levels": {
+            "0": {
+                "bufferSize": 4
+            }
+        }
+    }
 }
 HEREDOC
 
