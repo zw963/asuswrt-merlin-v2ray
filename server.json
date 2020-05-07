@@ -60,5 +60,12 @@
                 "outboundTag": "block"
             }
         ]
+    },
+    "policy": {
+        "levels": {
+            "0": {
+                "bufferSize": 1024
+            }
+        }
     }
 }
