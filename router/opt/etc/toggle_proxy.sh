@@ -9,6 +9,7 @@ function disable_proxy () {
     echo '[0m[33mDisabling proxy ...[0m'
 
     /opt/etc/clean_iptables_rule.sh && chmod -x /opt/etc/apply_iptables_rule.sh
+    chmod -x /opt/etc/init.d/S22v2ray && sh /opt/etc/init.d/S22v2ray stop
 
     if [ -d "$dnsmasq_dir" ]; then
         rm -f $dnsmasq_dir/v2ray.conf
@@ -22,6 +23,7 @@ function enable_proxy () {
     echo '[0m[33mEnabling proxy ...[0m'
 
     chmod +x /opt/etc/apply_iptables_rule.sh && /opt/etc/apply_iptables_rule.sh
+    chmod +x /opt/etc/init.d/S22v2ray && /opt/etc/init.d/S22v2ray start
 
     mkdir -p "$dnsmasq_dir"
 
