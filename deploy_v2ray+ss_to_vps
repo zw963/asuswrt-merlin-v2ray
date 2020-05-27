@@ -69,7 +69,7 @@ uuid=$(uuidgen)
 
 replace_string 'NEWUUID' "${uuid}" /etc/v2ray/config.json
 
-cat <<'HEREDOC' > /etc/sysctl.d/98-v2ray.conf
+cat <<'HEREDOC' >> /etc/sysctl.conf
 fs.file-max=51200
 
 net.core.rmem_max=67108864
@@ -79,7 +79,6 @@ net.core.somaxconn=4096
 
 net.ipv4.tcp_syncookies=1
 net.ipv4.tcp_tw_reuse=1
-net.ipv4.tcp_tw_recycle=0
 net.ipv4.tcp_fin_timeout=30
 net.ipv4.tcp_keepalive_time=1200
 net.ipv4.ip_local_port_range=10000 65000
@@ -89,7 +88,6 @@ net.ipv4.tcp_mem=25600 51200 102400
 net.ipv4.tcp_rmem=4096 87380 67108864
 net.ipv4.tcp_wmem=4096 65536 67108864
 net.ipv4.tcp_mtu_probing=1
-net.ipv4.tcp_congestion_control=hybla
 
 # 开启内核 fastopen, Linux 3.7 以上支持, 3.13 才默认开启.
 # 等价于 echo 3 > /proc/sys/net/ipv4/tcp_fastopen
@@ -98,15 +96,15 @@ HEREDOC
 
 if kernel_version_greater_than 4.9; then
     modprobe tcp_bbr && lsmod | grep bbr
-    echo "net.core.default_qdisc=fq" >> /etc/sysctl.d/98-v2ray.conf
-    echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.d/98-v2ray.conf
+    echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
+    echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
 fi
 
 sysctl -p > /dev/null
 
 # test bbr is enabled
-# sysctl net.ipv4.tcp_available_congestion_control |grep bbr
-# sysctl -n net.ipv4.tcp_congestion_control |grep bbr
+sysctl net.ipv4.tcp_available_congestion_control |grep bbr
+sysctl -n net.ipv4.tcp_congestion_control |grep bbr
 
 mkdir -p /var/log/v2ray
 
