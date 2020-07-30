@@ -2,7 +2,7 @@
 
 ssh "$*" '[ -f /opt/etc/toggle_proxy.sh ] && /opt/etc/toggle_proxy.sh disable'
 
-self="$(curl -sS -k https://raw.githubusercontent.com/zw963/deployment_bash/v0.5.5/deploy_start.sh)" && eval "$self"
+self="$(curl -sS -k https://raw.githubusercontent.com/zw963/deployment_bash/v0.6.0/deploy_start.sh)" && eval "$self"
 
 export target=$1
 
@@ -69,7 +69,7 @@ $RC start
 HEREDOC
 fi
 
-v2ray_version=4.23.1
+v2ray_version=4.26.0
 arch=linux-arm
 
 if [ -d predownloaded_binary ]; then
@@ -164,4 +164,4 @@ set -e
 add_service services-start '[ -f /tmp/patch_router_was_run_at ] || /opt/etc/patch_router'
 /opt/etc/patch_router
 
-echo 'Congratulations, Deploy succssful!'
+echo "Congratulations, [0m[33mDeploy succssful[0m!"

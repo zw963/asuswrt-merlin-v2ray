@@ -1,6 +1,6 @@
 #!/bin/sh
 
-self="$(curl -sS -k https://raw.githubusercontent.com/zw963/deployment_bash/v0.5.7/deploy_start.sh)" && eval "$self"
+self="$(curl -sS -k https://raw.githubusercontent.com/zw963/deployment_bash/v0.6.0/deploy_start.sh)" && eval "$self"
 # self="$(cat ~/Project/deployment_bash/deploy_start.sh)" && eval "$self"
 
 export target=$1
@@ -10,7 +10,7 @@ function postinstall () {
     echo
     echo 'Please wait copy generated client v2ray.json into local machine ...'
     scp $target:/etc/v2ray/v2ray.json ./router/opt/etc/
-    echo 'Run ./deploy_v2ray_to_router admin@192.168.50.1 to deploy to router.'
+    echo "Run [0m[33m./deploy_v2ray_to_router admin@192.168.50.1[0m to deploy to router."
 }
 
 if grep -qs -e 'set_yours_password_here' server.json; then
@@ -38,7 +38,7 @@ set -eu
 
 package compile-tools
 
-v2ray_version=4.23.1
+v2ray_version=4.26.0
 arch=linux-64
 
 mkdir -p /usr/bin/v2ray
