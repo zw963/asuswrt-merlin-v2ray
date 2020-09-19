@@ -30,7 +30,10 @@ If VPS behind a firewall, (e.g. ucloud, google cloud), you need enable 22334/223
 
 ## How to use
 
-Please finish prerequisites steps before do this.
+Please finish server prerequisites steps before do this if you are not a working
+v2ray server is running.
+
+Then, download the newest deploy script from [release page](https://github.com/zw963/asuswrt-merlin-v2ray/releases)
 
 Assume your's linux VPS IP is `34.80.108.8`, your's router IP is `192.168.50.1`.
 
