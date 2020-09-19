@@ -1,8 +1,8 @@
 #!/bin/bash
 
-ssh "$*" '[ -f /opt/etc/toggle_proxy.sh ] && /opt/etc/toggle_proxy.sh disable'
+# ssh "$*" '[ -f /opt/etc/toggle_proxy.sh ] && /opt/etc/toggle_proxy.sh disable'
 
-self="$(curl -sS -k https://raw.githubusercontent.com/zw963/deployment_bash/v0.6.0/deploy_start.sh)" && eval "$self"
+self="$(cat deploy_start.sh)" && eval "$self"
 
 export target=$1
 
@@ -24,7 +24,7 @@ copy router/opt/etc/update_geosite.sh /opt/etc
 
 if [ -d predownloaded_binary ] && zip_file=$(ls -1 predownloaded_binary/*.zip |head -n1); then
     echo 'Copy predownloaded binary to router ...'
-    copy predownloaded_binary/v2ray-linux-arm.zip predownloaded_binary/v2ray-linux-arm.zip
+    copy $zip_file $zip_file
 else
     ssh "$*" "rm -rf predownloaded_binary"
 fi
@@ -69,8 +69,8 @@ $RC start
 HEREDOC
 fi
 
-v2ray_version=4.26.0
-arch=linux-arm
+v2ray_version=4.28.2
+arch=linux-arm32-v5
 
 if [ -d predownloaded_binary ]; then
     cd predownloaded_binary && unzip -o *.zip && chmod +x v2ctl* v2ray*
