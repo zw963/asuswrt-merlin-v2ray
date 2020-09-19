@@ -1,7 +1,6 @@
 #!/bin/sh
 
-self="$(curl -sS -k https://raw.githubusercontent.com/zw963/deployment_bash/v0.6.0/deploy_start.sh)" && eval "$self"
-# self="$(cat ~/Project/deployment_bash/deploy_start.sh)" && eval "$self"
+self="$(cat deploy_start.sh)" && eval "$self"
 
 export target=$1
 

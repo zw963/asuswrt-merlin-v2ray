@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# ssh "$*" '[ -f /opt/etc/toggle_proxy.sh ] && /opt/etc/toggle_proxy.sh disable'
-
 self="$(cat deploy_start.sh)" && eval "$self"
 
 export target=$1
