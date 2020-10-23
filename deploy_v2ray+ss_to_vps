@@ -37,11 +37,11 @@ set -eu
 
 package compile-tools
 
-v2ray_version=4.28.2
+v2ray_version=4.31.0
 arch=linux-64
 
 mkdir -p /usr/bin/v2ray
-download_and_extract https://github.com/v2ray/v2ray-core/releases/download/v${v2ray_version}/v2ray-${arch}.zip v2ray-v${v2ray_version}
+download_and_extract https://github.com/v2fly/v2ray-core/releases/download/v${v2ray_version}/v2ray-${arch}.zip v2ray-v${v2ray_version}
 cd v2ray-v${v2ray_version} && rm *.sig && chmod +x v2ctl* v2ray*
 
 v2ray_commands=$(find -maxdepth 1 -name 'v2ray_*')
