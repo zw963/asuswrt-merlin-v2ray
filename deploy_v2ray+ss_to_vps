@@ -37,7 +37,7 @@ set -eu
 
 package compile-tools
 
-v2ray_version=4.31.0
+v2ray_version=4.32.0
 arch=linux-64
 
 mkdir -p /usr/bin/v2ray
