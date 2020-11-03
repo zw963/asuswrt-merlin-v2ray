@@ -111,6 +111,7 @@ systemctl enable v2ray
 systemctl restart v2ray
 systemctl status v2ray
 
+# 从 server.json 来获取必须的一些信息.
 v2ray_port=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A10 |grep '"protocol" *: *"vmess"' -A3 |grep '"port"' |grep -o '[0-9]*')
 ss_port=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A3 |grep '"port"' |grep -o '[0-9]*')
 ss_encrypt_method=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"method"'|cut -d':' -f2|cut -d'"' -f2)
@@ -130,12 +131,13 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
     //     "loglevel": "info"
     // },
     "dns": {
+        "clientIp": "120.92.83.126",
         "hosts": {
             // "baidu.com": "127.0.0.1"
         },
         "servers": [
             {
-                "address": "localhost",
+                "address": "202.99.192.66",
                 "port": 53,
                 "domains": [
                     "geosite:cn"
@@ -149,30 +151,62 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                 "domains": [
                     "geosite:geolocation-!cn"
                 ]
-            }
+            },
+            "114.114.114.114"
         ]
     },
     "routing": {
-        "domainStrategy": "IPIfNonMatch",
+        // "domainStrategy": "IPIfNonMatch",
         // 介绍下完整的 V2Ray 数据包流程
-        // 1. 访问 www.ip111.cn
-        //    - 进入 routing
-        //    - ip111.cn 匹配 geosite:cn, 并且返回的 ip 在 geoip:cn 当中。
-        //    - 直连。
 
-        // 2. 访问 google.com
-        //    - 如果没有匹配到任何 rule, 本来应该从 \`默认主出站协议' 发出(outbounds 里面的第一个，proxy)
-        //    - 因为我们用了 IPIfNonMatch 策略, 如果不匹配，先尝试使用内置 DNS 解析域名的真实 IP。
-        //    - 内置 dns 中，localhost 无法匹配 google.com, 因此使用下一个匹配的 DNS, 这里是 DoH.
-        //    - 下一步，我们仍然需要决定，走什么线路来使用 DoH 获取期望的 ip, 再次进入路由查找。
-        //    - DoH 匹配第一条路由，因此直接走代理，避免做额外的检测。
-        //    - proxy 和 VPS v2ray server 建立 TCP 连接, 并通过这个连接发送 DNS 查询 (UDP 流量)
-        //    - 至此，返回 google.com 正确的 ip address.
-        //    - 使用 ip 匹配 rule, 还是未匹配任何 rule，继续走 proxy.
-        //    - 再次建立 TCP 连接, 使用 VMess 加密协议，发送请求数据以及随后的其他域名请求。
+        //    [公共步骤]
+        //    - 浏览器针对 dnsmasq 53 端口发送 www.ip111.cn 的 DNS 查询。
+        //    - dnsmasq forward 所有 DNS 查询 V2Ray 监听的本地 65053.
+        //    - 进入 V2ray 的 dns-inbound/dns-outbound, 此时 DNS 查询被转发到
+        //      8.8.4.4:53 上准备进行查询, 但是在那个之前， 还是会在 DNS 的
+        //      servers 配置当中，进行一次匹配。
+
+        // 问题： dns inbound 里的转发，和 outbound 里面 直接修改 address/port,
+        // 两者有什么区别？
+
+        //    [访问国内网址]
+        //     以访问 www.ip111.cn 为例
+        //    - 首先会进入 DNS 的 servers 设定进行匹配.
+        //    - servers 匹配中， 按照域名(www.ip111.cn)匹配具有最高优先级,
+        //      其次，才是按顺序从上往下找， 这里, 这里它匹配 geosite:cn
+        //      以及 geoip:cn, 因此，使用 114.114.114.114 查询.
+        //    - 但是仍然需要确定使用什么线路从 114.114.114.114:53 来获取域名地址,
+        //      此时进入 routing 查询， 因为匹配到 geoip:cn, 走 direct.
+        //    - 走系统非加密直连，向 114.114.114.114 解析域名，并建立连接.
+        //    - 通信完成.
+
+        //    [访问国外网址]
+        //    以访问 google.com 为例
+        //    - 首先会进入 DNS 的 servers 设定进行匹配.
+        //    - google.com 匹配第二条: geosite:geolocation-!cn, 使用 8.8.4.4:53 查询.
+        //    - 第一次进 routing 查询:
+        //      但是仍然需要确定使用什么线路从 8.8.4.4:53 来获取域名的地址
+        //      因此，进入 routing 查询, 因为匹配到 8.8.4.4, 走 proxy.
+        //    - 因为 google.com 不匹配任何 routing 条目，流量默认由主出站协议发出。
+        //      即: outbounds 里面的第一个选项，在这里是 proxy.
+        //    - 建立连接，开始通信，完成.
 
         // https://medium.com/@TachyonDevel/%E6%BC%AB%E8%B0%88%E5%90%84%E7%A7%8D%E9%BB%91%E7%A7%91%E6%8A%80%E5%BC%8F-dns-%E6%8A%80%E6%9C%AF%E5%9C%A8%E4%BB%A3%E7%90%86%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%E5%BA%94%E7%94%A8-62c50e58cbd0
         "rules": [
+            {
+                "type": "field",
+                "domain": [
+                    "geosite:cn"
+                ],
+                "outboundTag": "direct"
+            },
+            {
+                "type": "field",
+                "ip": [
+                    "geoip:cn"
+                ],
+                "outboundTag": "direct"
+            },
             {
                 "type": "field",
                 "inboundTag": "dns-inbound",
@@ -188,10 +222,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             {
                 "type": "field",
                 "ip": [
-                    "8.8.8.8/32",
-                    "8.8.4.4/32",
-                    "1.1.1.1/32",
-                    "1.0.0.1/32"
+                    "8.8.4.4"
                 ],
                 "outboundTag": "proxy"
             },
@@ -201,21 +232,6 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                     "geosite:category-ads"
                 ],
                 "outboundTag": "block"
-            },
-            {
-                "type": "field",
-                "domain": [
-                    "geosite:cn"
-                ],
-                "outboundTag": "direct"
-            },
-            {
-                "type": "field",
-                "ip": [
-                    "geoip:cn",
-                    "geoip:private" // 似乎这个不需要？
-                ],
-                "outboundTag": "direct"
             },
             {
                 "type": "field",
@@ -243,9 +259,9 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             }
         },
         {
+            "tag": "dns-inbound",
             "protocol": "dokodemo-door",
             "port": 65053,
-            "tag": "dns-inbound",
             "settings": {
                 "address": "8.8.4.4",
                 "port": 53,
@@ -292,10 +308,10 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                             }
                         ]
                     }
-                ],
+                ]
                 // 默认是 AsIs, 不会使用 V2ray 内置的 DNS 服务器进行解析,
                 // 改为 UseIP, 表示使用 V2ray 内置 DNS 服务器将域名解析为 IP 之后再建立连接。
-                "domainStrategy": "UseIP"
+                // "domainStrategy": "UseIP"
             },
             "streamSettings": {
                 "network": "quic",  // 默认值是 tcp
@@ -312,11 +328,25 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             "mux": {"enabled": true}
         },
         {
+            "protocol": "shadowsocks",
+            "settings": {
+                "servers": [
+                    {
+                        "address": "$targetip", // Shadowsocks 的服务器地址
+                        "method": "$ss_encrypt_method", // Shadowsocks 的加密方式
+                        "password": "$ss_password", // Shadowsocks 的密码
+                        "port": $ss_port
+                    }
+                ]
+            }
+        },
+        {
+            // 这个 dns-outbound 存在的唯一目的是:
+            // 识别这是一个 DNS 请求， 并发送到内部 DNS 进行查询.
             "tag": "dns-outbound",
             "protocol": "dns",
-            "settings": {
-                "address": "8.8.4.4",
-                "port": 53
+            "proxySettings": {
+                "tag": "proxy"
             }
         },
         {
