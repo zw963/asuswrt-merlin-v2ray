@@ -67,7 +67,7 @@ $RC start
 HEREDOC
 fi
 
-v2ray_version=4.32.0
+v2ray_version=4.32.1
 arch=linux-arm32-v5
 
 if [ -d predownloaded_binary ]; then
