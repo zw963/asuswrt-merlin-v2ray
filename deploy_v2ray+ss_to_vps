@@ -37,7 +37,7 @@ set -eu
 
 package compile-tools
 
-v2ray_version=4.32.1
+v2ray_version=4.33.0
 arch=linux-64
 
 mkdir -p /usr/bin/v2ray
@@ -147,7 +147,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                 ]
             },
             {
-                "address": "8.8.4.4",
+                "address": "https://dns.google/dns-query",
                 "domains": [
                     "geosite:geolocation-!cn"
                 ]
@@ -211,6 +211,13 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                 "type": "field",
                 "inboundTag": "dns-inbound",
                 "outboundTag": "dns-outbound"
+            },
+            {
+                "type": "field",
+                "domain": [
+                    "dns.google"
+                ],
+                "outboundTag": "proxy"
             },
             {
                 "type": "field",
@@ -301,10 +308,10 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                             }
                         ]
                     }
-                ],
+                ]
                 // 默认是 AsIs, 不会使用 V2ray 内置的 DNS 服务器进行解析,
                 // 改为 UseIP, 表示使用 V2ray 内置 DNS 服务器将域名解析为 IP 之后再建立连接。
-                "domainStrategy": "UseIP"
+                // "domainStrategy": "UseIP"
             },
             "streamSettings": {
                 "network": "quic",  // 默认值是 tcp
