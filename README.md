@@ -5,14 +5,14 @@
 This project is several scripts for config you ASUS router(merlin based) to serve
 as a transparent forward proxy.
 
-Since 2020-09-19, this project's release version just follow v2ray's version.
+Since 2020-09-19, this project's release version just follow [V2Ray-core](https://github.com/v2fly/v2ray-core)'s version.
 
 ## Feature
 
 1. transparent proxy(you know reason) for all devices connect to your's WiFi.
 2. use your router 1080 port (e.g. router.asus.com:1080) as a socks5/http proxy directly.
 3. Ad block.
-4. All additional benefits come from [V2ray](https://github.com/v2fly).
+4. All additional benefits come from V2Ray.
 
 ## Prerequisites
 
