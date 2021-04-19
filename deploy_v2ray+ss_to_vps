@@ -126,6 +126,46 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
 // 本脚本可作为 普通 v2ray client 脚本，也可以作为 ASUS merlin 路由器透明代理 v2ray 脚本，
 // 运行 ./v2ray+dnsmasq+dnscrypt2 admin@router.asus.com 部署这个配置文件到路由器。
 
+        // 尝试解释一下完整的 V2Ray 数据包流程
+
+        //    [公共步骤]
+        //    - 在 ASUS 路由器上，启动 V2Ray, 并且监听 65053 端口。
+        //    - 浏览器访问针对路由器 53 端口（dnsmasq）发送 ip111 或 google 的 DNS 查询。
+        //    - dnsmasq forward 所有 DNS 查询到 V2Ray 监听的本地 65053 端口。
+        //    - 首次查询路由： 因为匹配 dns-inbound 中的端口， 因此
+        //      所有发送到 65053 的内容，会被转发到到 8.8.4.4:53，并且通过对应的
+        //      dns-outbound 中的 DNS 协议，将IP 查询（即 A 和 AAAA）转发给内置的 DNS 服务器.
+        //    - 注意： servers 匹配中， 按照域名(www.ip111.cn)匹配具有最高优先级。
+
+        //    [访问国内网址 www.ip111.cn]
+        //    - 首先会使用 dns 配置中的 domains 策略对 www.ip111.cn 进行匹配.
+        //      优先使用 202.99.192.66 对域名进行解析，得到的 ip 地址是浙江阿里云，
+        //      符合 geosite:cn 以及 expected ip 是 geoip:cn，因此匹配。
+        //    - 第一次进入路由：
+        //    - 确定使用什么线路来从 202.99.192.66 获取域名的地址。
+        //    - 路由中匹配 geoip:cn, 判定因此使用直连.
+        //    - 通过直连 202.99.192.66 的方式， 获取到 ip111.cn 正确 ip 地址 121.41.110.161
+        //    - 第二次进入路由：
+        //      但是仍然需要确定使用什么线路从 121.41.110.161 来获取内容。
+        //    - 121.41.110.161 匹配 geoip:cn, 判定因此使用直连.
+        //    - 走系统非加密直连，向 121.41.110.161 建立连接, 开始通信。
+
+        //    [访问国外网址 www.google.com]
+        //    - 首先会使用 dns 配置中的 domains 策略对 www.google.com 进行匹配.
+        //      尝试使用 202.99.192.66 对域名进行解析，结果不匹配，因为返回的
+        //      ip 地址是一个国外的废弃 ip.
+        //    - 因此会使用默认域名策略 DNS over HTTPS (RFC8484, 简称DOH)，向
+        //      8.8.4.4 进行查询.(这里描述是否正确？ 是不是还会使用 8.8.4.4？)
+        //    - 第一次进入路由：确定使用什么线路从 8.8.4.4:53 来获取域名的地址
+        //      因此，进入 routing 查询, 因为匹配到 8.8.4.4, 走 proxy.
+        //    - 使用 proxy + DOH 的方式，获取到 google.com 的正确 IP 地址 142.250.204.68.
+        //    - 第二次进入路由： 需要确定使用什么线路从 142.250.204.68 来获取内容。
+        //    - 142.250.204.68 未匹配任何条目，流量默认由主出站协议
+        //      （outbounds 里面的第一个）发出，即 proxy.
+        //    - 走系统加密直连， 建立连接，开始通信，完成.
+
+        // https://medium.com/@TachyonDevel/%E6%BC%AB%E8%B0%88%E5%90%84%E7%A7%8D%E9%BB%91%E7%A7%91%E6%8A%80%E5%BC%8F-dns-%E6%8A%80%E6%9C%AF%E5%9C%A8%E4%BB%A3%E7%90%86%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%E5%BA%94%E7%94%A8-62c50e58cbd0
+
 {
     // "log": {
     //     "loglevel": "info"
@@ -137,6 +177,9 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
         },
         "servers": [
             {
+                // 如果 DNS 的域名满足指定的 domains 策略，则优先使用
+                // 202.99.192.66 来解析当前域名，而不是传过来的默认 8.8.4.4
+                // 这里的 202.99.192.66 也可以替换为 114.114.114.114
                 "address": "202.99.192.66",
                 "port": 53,
                 "domains": [
@@ -146,61 +189,26 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                     "geoip:cn"
                 ]
             },
-            {
-                "address": "https://dns.google/dns-query",
-                "domains": [
-                    "geosite:geolocation-!cn"
-                ]
-            },
-            "114.114.114.114"
+             // V2Ray 会使用 DNS over HTTPS (RFC8484, 简称DOH) 进行查询。
+             "https://dns.google/dns-query"
         ]
     },
     "routing": {
+        // 这个选项似乎没有必要，因为在 dns-inbound 选项中，已经使用 address": "8.8.4.4"
+        // 来转发 DNS 请求到 8.8.4.4 来解析域名， 而 8.8.4.4 一定会被 servers 的默认值
+        // DOH 处理，这是合理的.
         // "domainStrategy": "IPIfNonMatch",
-        // 介绍下完整的 V2Ray 数据包流程
-
-        //    [公共步骤]
-        //    - 浏览器针对 dnsmasq 53 端口发送 www.ip111.cn 的 DNS 查询。
-        //    - dnsmasq forward 所有 DNS 查询 V2Ray 监听的本地 65053.
-        //    - 进入 V2ray 的 dns-inbound/dns-outbound, 此时 DNS 查询被转发到
-        //      8.8.4.4:53 上准备进行查询, 但是在那个之前， 还是会在 DNS 的
-        //      servers 配置当中，进行一次匹配。
-
-        // 问题： dns inbound 里的转发，和 outbound 里面 直接修改 address/port,
-        // 两者有什么区别？
-
-        //    [访问国内网址]
-        //     以访问 www.ip111.cn 为例
-        //    - 首先会进入 DNS 的 servers 设定进行匹配.
-        //    - servers 匹配中， 按照域名(www.ip111.cn)匹配具有最高优先级,
-        //      其次，才是按顺序从上往下找， 这里, 这里它匹配 geosite:cn
-        //      以及 geoip:cn, 因此，使用 114.114.114.114 查询.
-        //    - 但是仍然需要确定使用什么线路从 114.114.114.114:53 来获取域名地址,
-        //      此时进入 routing 查询， 因为匹配到 geoip:cn, 走 direct.
-        //    - 走系统非加密直连，向 114.114.114.114 解析域名，并建立连接.
-        //    - 通信完成.
-
-        //    [访问国外网址]
-        //    以访问 google.com 为例
-        //    - 首先会进入 DNS 的 servers 设定进行匹配.
-        //    - google.com 匹配第二条: geosite:geolocation-!cn, 使用 8.8.4.4:53 查询.
-        //    - 第一次进 routing 查询:
-        //      但是仍然需要确定使用什么线路从 8.8.4.4:53 来获取域名的地址
-        //      因此，进入 routing 查询, 因为匹配到 8.8.4.4, 走 proxy.
-        //    - 因为 google.com 不匹配任何 routing 条目，流量默认由主出站协议发出。
-        //      即: outbounds 里面的第一个选项，在这里是 proxy.
-        //    - 建立连接，开始通信，完成.
-
-        // https://medium.com/@TachyonDevel/%E6%BC%AB%E8%B0%88%E5%90%84%E7%A7%8D%E9%BB%91%E7%A7%91%E6%8A%80%E5%BC%8F-dns-%E6%8A%80%E6%9C%AF%E5%9C%A8%E4%BB%A3%E7%90%86%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%E5%BA%94%E7%94%A8-62c50e58cbd0
         "rules": [
-            {
+             {
                 "type": "field",
                 "domain": [
-                    "services.googleapis.cn"
+                    "services.googleapis.cn",
+                    "dns.google",
+                    "geosite:geolocation-!cn"
                 ],
                 "outboundTag": "proxy"
-            },
-            {
+             },
+             {
                 "type": "field",
                 "domain": [
                     "geosite:cn"
@@ -216,22 +224,15 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             },
             {
                 "type": "field",
-                "inboundTag": "dns-inbound",
-                "outboundTag": "dns-outbound"
-            },
-            {
-                "type": "field",
-                "domain": [
-                    "dns.google"
-                ],
-                "outboundTag": "proxy"
-            },
-            {
-                "type": "field",
                 "ip": [
                     "8.8.4.4"
                 ],
                 "outboundTag": "proxy"
+            },
+            {
+                "type": "field",
+                "inboundTag": "dns-inbound",
+                "outboundTag": "dns-outbound"
             },
             {
                 "type": "field",
@@ -270,6 +271,8 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             "protocol": "dokodemo-door",
             "port": 65053,
             "settings": {
+                 // 这里是流量被转发到的地址，端口，可接受的网络协议类型
+                 // 注意： 这有别于 dns-outbound 中对应的配置，后者是直接修改 DNS 服务器地址/端口
                 "address": "8.8.4.4",
                 "port": 53,
                 "network": "tcp,udp"
@@ -316,9 +319,6 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                         ]
                     }
                 ]
-                // 默认是 AsIs, 不会使用 V2ray 内置的 DNS 服务器进行解析,
-                // 改为 UseIP, 表示使用 V2ray 内置 DNS 服务器将域名解析为 IP 之后再建立连接。
-                // "domainStrategy": "UseIP"
             },
             "streamSettings": {
                 "network": "quic",  // 默认值是 tcp
@@ -351,10 +351,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             // 这个 dns-outbound 存在的唯一目的是:
             // 识别这是一个 DNS 请求， 并发送到内部 DNS 进行查询.
             "tag": "dns-outbound",
-            "protocol": "dns",
-            "proxySettings": {
-                "tag": "proxy"
-            }
+            "protocol": "dns"
         },
         {
             "tag": "direct",
