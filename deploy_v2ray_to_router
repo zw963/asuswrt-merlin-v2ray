@@ -134,12 +134,11 @@ chmod +x apply_iptables_rule.sh \
 #
 # ---------------------------------------------------
 
-# 每隔 1 分钟检测下所有的服务是否运行.
-add_service wan-start 'cru a run-services "*/1 * * * *" "/jffs/scripts/services-start"'
-# 每隔 3 分钟检测下 iptables 是否失效.
-add_service wan-start 'cru a run-iptables "*/3 * * * *" "/opt/etc/apply_iptables_rule.sh"'
-# 每隔 2 天升级一次
-# add_service wan-start 'cru a update_geosites "* * */2 * *" "/opt/etc/update_geosite.sh"'
+# 每隔 3 分钟检测下所有的服务是否运行, 以及 iptables rule 是否失效.
+add_service wan-start 'cru a run-services "*/3 * * * * /jffs/scripts/services-start"'
+add_service wan-start 'cru a run-iptables "*/3 * * * * /opt/etc/apply_iptables_rule.sh"'
+# 每个周日的 5: 25 升级一次 geosites 数据.
+add_service wan-start 'cru a update_geosites "25 5 * * 0 /opt/etc/update_geosite.sh"'
 
 /jffs/scripts/wan-start
 
