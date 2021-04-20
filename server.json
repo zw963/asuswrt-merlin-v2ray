@@ -42,7 +42,11 @@
     "outbounds": [
         {
             "protocol": "freedom",
-            "settings": {}
+            "settings": {
+                // 默认是 AsIs, 不会使用 V2ray 内置的 DNS 服务器进行解析,
+                // 改为 UseIP, 表示使用 V2ray 内置 DNS 服务器将域名解析为 IP 之后再建立连接。
+                "domainStrategy": "UseIP"
+            }
         },
         {
             "tag": "block",
