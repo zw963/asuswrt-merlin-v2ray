@@ -141,27 +141,25 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
         //    - 首先会使用 dns 配置中的 domains 策略对 www.ip111.cn 进行匹配.
         //      优先使用 202.99.192.66 对域名进行解析，得到的 ip 地址是浙江阿里云，
         //      符合 geosite:cn 以及 expected ip 是 geoip:cn，因此匹配。
-        //    - 第一次进入路由：
-        //    - 确定使用什么线路来从 202.99.192.66 获取域名的地址。
-        //    - 路由中匹配 geoip:cn, 判定因此使用直连.
-        //    - 通过直连 202.99.192.66 的方式， 获取到 ip111.cn 正确 ip 地址 121.41.110.161
-        //    - 第二次进入路由：
-        //      但是仍然需要确定使用什么线路从 121.41.110.161 来获取内容。
-        //    - 121.41.110.161 匹配 geoip:cn, 判定因此使用直连.
-        //    - 走系统非加密直连，向 121.41.110.161 建立连接, 开始通信。
+        //    - 第一次进入路由: 确定使用什么线路来从 202.99.192.66 获取 ip111 的地址。
+        //      202.99.192.66 匹配 geoip:cn, 判定因此使用直连.(outboundTag: direct)
+        //      通过直连 202.99.192.66 的方式， 获取到 ip111.cn 正确 ip 地址 121.41.110.161
+        //    - 第二次进入路由: 但是仍然需要确定使用什么线路从 121.41.110.161 来获取内容。
+        //      121.41.110.161 匹配 geoip:cn, 判定因此使用直连.
+        //      走系统非加密直连，向 121.41.110.161 建立连接, 开始通信。
 
-        //    [访问国外网址 www.google.com]
-        //    - 首先会使用 dns 配置中的 domains 策略对 www.google.com 进行匹配.
-        //      尝试使用 202.99.192.66 对域名进行解析，结果不匹配，因为返回的
-        //      ip 地址是一个国外的废弃 ip.
-        //    - 因此会使用默认域名策略 DNS over HTTPS (RFC8484, 简称DOH)，向
-        //      8.8.4.4 进行查询.(这里描述是否正确？ 是不是还会使用 8.8.4.4？)
-        //    - 第一次进入路由：确定使用什么线路从 8.8.4.4:53 来获取域名的地址
-        //      因此，进入 routing 查询, 因为匹配到 8.8.4.4, 走 proxy.
-        //    - 使用 proxy + DOH 的方式，获取到 google.com 的正确 IP 地址 142.250.204.68.
-        //    - 第二次进入路由： 需要确定使用什么线路从 142.250.204.68 来获取内容。
-        //    - 142.250.204.68 未匹配任何条目，流量默认由主出站协议
-        //      （outbounds 里面的第一个）发出，即 proxy.
+        //    [访问国外网址 twitter.com]
+        //    - 首先会使用 dns 配置中的 domains 策略对 twitter.com 进行匹配.
+        //      尝试使用 202.99.192.66, 因为国内的 DNS 返回的 ip 地址是一个国外的废弃 ip,
+        //      此时不满足 expectIPs, 因此不匹配.
+        //    - 内置的 DNS 向 https://dns.google/dns-query 发起针对 twitter.com 的请求.
+        //      上面的特殊写法代表 DNS over HTTPS (RFC8484, 简称DOH)
+        //      DoH 默认走第一个 outbound（DoH 域名需要在 hosts 中指定 IP 地址）
+        //    - 第一次进入路由： 内置 DNS 发出的 DNS 请求也会按照路由规则走,
+        //      因此，dns.google 匹配 routing 查询, 走 proxy.
+        //    - 使用 proxy + DOH 的方式，从服务器获取 twitter.com 的正确 IP 地址 142.250.204.68.
+        //    - 第二次进入路由： 由于 inbounds 配置了sniffing，所以 IP 又被重置为了域名 twitter.com
+        //    - 由于twitter.com域名符合geosite:geolocation-!cn，所以直接被拐进了proxy
         //    - 走系统加密直连， 建立连接，开始通信，完成.
 
         // https://medium.com/@TachyonDevel/%E6%BC%AB%E8%B0%88%E5%90%84%E7%A7%8D%E9%BB%91%E7%A7%91%E6%8A%80%E5%BC%8F-dns-%E6%8A%80%E6%9C%AF%E5%9C%A8%E4%BB%A3%E7%90%86%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%E5%BA%94%E7%94%A8-62c50e58cbd0
@@ -172,7 +170,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
     // },
     "dns": {
         "hosts": {
-            // "baidu.com": "127.0.0.1"
+            "dns.google": "8.8.4.4"
         },
         "servers": [
             {
@@ -189,6 +187,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                 ]
             },
              // V2Ray 会使用 DNS over HTTPS (RFC8484, 简称DOH) 进行查询。
+             // DoH 默认走第一个 outbound 来查询 （DoH 域名需要在 hosts 中指定 IP 地址）
              "https://dns.google/dns-query"
         ]
     },
@@ -197,24 +196,17 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
         // 来转发 DNS 请求到 8.8.4.4 来解析域名， 而 8.8.4.4 一定会被 servers 的默认值
         // DOH 处理，这是合理的.
         // "domainStrategy": "IPIfNonMatch",
+        "domainMatcher": "mph",
         "rules": [
              {
                 "type": "field",
                 "domain": [
                     "services.googleapis.cn",
-                    "dns.google",
                     "geosite:geolocation-!cn"
                 ],
                 "outboundTag": "proxy"
              },
-            {
-                "type": "field",
-                "ip": [
-                    "8.8.4.4"
-                ],
-                "outboundTag": "proxy"
-            },
-            {
+             {
                 "type": "field",
                 "domain": [
                     "geosite:cn"
@@ -262,7 +254,8 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             },
             "settings": {
                 "network": "tcp,udp",
-                "followRedirect": true // 这里要为 true 才能接受来自 iptables 的流量
+                // 当值为 true 时，dokodemo-door 会识别出由 iptables 转发而来的数据，并转发到相应的目标地址。详见 传输配置 中的 tproxy 设置。
+                "followRedirect": true
             }
         },
         {
@@ -270,8 +263,9 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             "protocol": "dokodemo-door",
             "port": 65053,
             "settings": {
-                 // 这里是流量被转发到的地址，端口，可接受的网络协议类型
-                 // 注意： 这有别于 dns-outbound 中对应的配置，后者是直接修改 DNS 服务器地址/端口
+                // 这里是流量被转发到的地址，端口，可接受的网络协议类型
+                // 注意： 这有别于 dns-outbound 中对应的配置，后者是直接修改 DNS 服务器地址/端口
+                // 因为这里的流量直接来自 dnsmasq, 所以这个 address 必须填, 似乎随便填都可以.
                 "address": "8.8.4.4",
                 "port": 53,
                 "network": "tcp,udp"

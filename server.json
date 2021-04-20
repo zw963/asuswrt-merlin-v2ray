@@ -55,6 +55,7 @@
         }
     ],
     "routing": {
+        "domainMatcher": "mph",
         "rules": [
             {
                 "type": "field",
