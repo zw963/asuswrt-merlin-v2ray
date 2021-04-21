@@ -35,7 +35,7 @@
             "port": 22335, // 监听端口
             "settings": {
                 "method": "chacha20-ietf-poly1305",
-                "password": "set_yours_password_here"
+                "password": "change_yours_password_here"
             }
         }
     ],
@@ -69,7 +69,7 @@
     "policy": {
         "levels": {
             "0": {
-                "bufferSize": 1024
+                "bufferSize": 2048
             }
         }
     }

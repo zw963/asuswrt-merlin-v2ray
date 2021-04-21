@@ -12,9 +12,9 @@ function postinstall () {
     echo "Run [0m[33m./deploy_v2ray_to_router admin@192.168.50.1[0m to deploy to router."
 }
 
-if grep -qs -e 'set_yours_password_here' server.json; then
+if grep -qs -e 'change_yours_password_here' server.json; then
     echo 'v2ray server served as a shadowsocks server too.'
-    echo "You must change \`[0m[33mset_yours_password_here[0m' to a NEW password in \`./server.json'!"
+    echo "You must change \`[0m[33mchange_yours_password_here[0m' to a NEW password in \`./server.json'!"
     exit
 fi
 
@@ -308,6 +308,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                             {
                                 "id": "$uuid",  // 用户 ID，必须与服务器端配置相同
                                 "alterId": 4 // 此处的值也应当与服务器相同
+                                // 注意, vmess 加密必须开启, 否则上不了网.
                             }
                         ]
                     }
@@ -324,8 +325,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                     "tproxy": "redirect",
                     "mark": 255
                 }
-            },
-            "mux": {"enabled": true}
+            }
         },
         {
             "protocol": "shadowsocks",
