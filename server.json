@@ -16,8 +16,7 @@
             "settings": {
                 "clients": [
                     {
-                        "id": "NEWUUID",
-                        "alterId": 4
+                        "id": "NEWUUID"
                     }
                 ]
             },

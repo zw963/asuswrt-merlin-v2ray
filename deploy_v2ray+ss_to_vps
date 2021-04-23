@@ -141,8 +141,9 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
         //    - 首先会使用 dns 配置中的 domains 策略对 www.ip111.cn 进行匹配.
         //      优先使用 202.99.192.66 对域名进行解析，得到的 ip 地址是浙江阿里云，
         //      符合 geosite:cn 以及 expected ip 是 geoip:cn，因此匹配。
-        //    - 第一次进入路由: 确定使用什么线路来从 202.99.192.66 获取 ip111 的地址。
-        //      202.99.192.66 匹配 geoip:cn, 判定因此使用直连.(outboundTag: direct)
+        //    - 第一次进入路由: 内置 DNS 发出的 DNS 请求也会按照路由规则走, 确定使用
+        //      什么线路来从 202.99.192.66 获取 ip111 的地址,202.99.192.66 匹配 geoip:cn,
+        //      判定因此使用直连.(outboundTag: direct)
         //      通过直连 202.99.192.66 的方式， 获取到 ip111.cn 正确 ip 地址 121.41.110.161
         //    - 第二次进入路由: 但是仍然需要确定使用什么线路从 121.41.110.161 来获取内容。
         //      121.41.110.161 匹配 geoip:cn, 判定因此使用直连.
@@ -153,14 +154,22 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
         //      尝试使用 202.99.192.66, 因为国内的 DNS 返回的 ip 地址是一个国外的废弃 ip,
         //      此时不满足 expectIPs, 因此不匹配.
         //    - 内置的 DNS 向 https://dns.google/dns-query 发起针对 twitter.com 的请求.
-        //      上面的特殊写法代表 DNS over HTTPS (RFC8484, 简称DOH)
-        //      DoH 默认走第一个 outbound（DoH 域名需要在 hosts 中指定 IP 地址）
-        //    - 第一次进入路由： 内置 DNS 发出的 DNS 请求也会按照路由规则走,
-        //      因此，dns.google 匹配 routing 查询, 走 proxy.
+        //      上面的特殊写法代表 DNS over HTTPS (RFC8484, 简称DOH),DoH 默认不经过路由,
+        //      直接走第一个 outbound（DoH 域名需要在 hosts 中指定 IP 地址）, 即 proxy.
         //    - 使用 proxy + DOH 的方式，从服务器获取 twitter.com 的正确 IP 地址 142.250.204.68.
-        //    - 第二次进入路由： 由于 inbounds 配置了sniffing，所以 IP 又被重置为了域名 twitter.com
-        //    - 由于twitter.com域名符合geosite:geolocation-!cn，所以直接被拐进了proxy
+        //    - 第一次进入路由： 由于 inbounds 配置了sniffing，所以 IP 又被重置为了域名 twitter.com
+        //    - 由于 twitter.com 域名符合 geosite:geolocation-!cn，走 proxy
         //    - 走系统加密直连， 建立连接，开始通信，完成.
+
+        //    [访问不在白名单中的国内网址 kid17.com]
+        //    - 首先会使用 dns 配置中的 domains 策略对 kid17.com 进行匹配.
+        //      尝试使用 202.99.192.66, 因为 kid17 不在 geosite:cn 里面, 因此不匹配.
+        //    - 内置的 DNS 向 https://dns.google/dns-query 发起针对 kid17.com 的请求.
+        //      上面的特殊写法代表 DNS over HTTPS (RFC8484, 简称DOH),DoH 默认不经过路由,
+        //      直接走第一个 outbound（DoH 域名需要在 hosts 中指定 IP 地址）, 即 proxy.
+        //    - 使用 proxy + DOH 的方式，从服务器获取 kid17.com 的正确 IP 地址 47.101.44.231
+        //    - 第一次进路由: 47.101.47.231, 此 IP 匹配 geoip:cn, 因此走直连.
+
 
         // https://medium.com/@TachyonDevel/%E6%BC%AB%E8%B0%88%E5%90%84%E7%A7%8D%E9%BB%91%E7%A7%91%E6%8A%80%E5%BC%8F-dns-%E6%8A%80%E6%9C%AF%E5%9C%A8%E4%BB%A3%E7%90%86%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%E5%BA%94%E7%94%A8-62c50e58cbd0
 
@@ -188,35 +197,17 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             },
              // V2Ray 会使用 DNS over HTTPS (RFC8484, 简称DOH) 进行查询。
              // DoH 默认走第一个 outbound 来查询 （DoH 域名需要在 hosts 中指定 IP 地址）
-             "https://dns.google/dns-query"
+             "8.8.4.4"
         ]
     },
     "routing": {
-        // 这个选项似乎没有必要，因为在 dns-inbound 选项中，已经使用 address": "8.8.4.4"
-        // 来转发 DNS 请求到 8.8.4.4 来解析域名， 而 8.8.4.4 一定会被 servers 的默认值
-        // DOH 处理，这是合理的.
-        // "domainStrategy": "IPIfNonMatch",
+        "domainStrategy": "IPIfNonMatch",
         "domainMatcher": "mph",
         "rules": [
-             {
-                "type": "field",
-                "domain": [
-                    "services.googleapis.cn",
-                    "geosite:geolocation-!cn"
-                ],
-                "outboundTag": "proxy"
-             },
-             {
-                "type": "field",
-                "domain": [
-                    "geosite:cn"
-                ],
-                "outboundTag": "direct"
-            },
             {
                 "type": "field",
-                "ip": [
-                    "geoip:cn"
+                "protocol":[
+                    "bittorrent"
                 ],
                 "outboundTag": "direct"
             },
@@ -227,17 +218,42 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             },
             {
                 "type": "field",
+                "ip": [
+                    "8.8.4.4",
+                    "8.8.8.8"
+                ],
+                "outboundTag": "proxy"
+            },
+            {
+                "type": "field",
+                "ip": [
+                    "202.99.192.66",
+                    "geoip:cn"
+                ],
+                "outboundTag": "direct"
+            },
+            {
+                "type": "field",
+                "domain": [
+                    // 这里添加必须走 proxy 的域名例外.
+                    "services.googleapis.cn",
+                    "geosite:geolocation-!cn"
+                ],
+                "outboundTag": "proxy"
+            },
+            {
+                "type": "field",
+                "domain": [
+                    "geosite:cn"
+                ],
+                "outboundTag": "direct"
+            },
+            {
+                "type": "field",
                 "domain": [
                     "geosite:category-ads"
                 ],
                 "outboundTag": "block"
-            },
-            {
-                "type": "field",
-                "protocol":[
-                    "bittorrent"
-                ],
-                "outboundTag": "direct"
             }
         ]
     },
@@ -306,9 +322,9 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                         "port": $v2ray_port,  // 服务器端口
                         "users": [
                             {
-                                "id": "$uuid",  // 用户 ID，必须与服务器端配置相同
-                                "alterId": 4 // 此处的值也应当与服务器相同
-                                // 注意, vmess 加密必须开启, 否则上不了网.
+                                // 注意, vmess 加密默认开启, 也必须开启, 否则上不了网.
+                                // alterId 默认为 0, 表示开启 VMessAEAD.
+                                "id": "$uuid"  // 用户 ID，必须与服务器端配置相同
                             }
                         ]
                     }
@@ -349,6 +365,11 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
         {
             "tag": "direct",
             "protocol": "freedom",
+            "settings": {
+                // 这里我选择加上试试, 搞不好我的方案, freedom 真的又去访问 dnsmasq
+                // 的 53 端口, 又被转到 V2ray 的 DNS 呢.
+                "domainStrategy": "UseIP"
+            },
             "streamSettings": {
                 "network": "tcp",  // 这是默认值
                 "sockopt": {
