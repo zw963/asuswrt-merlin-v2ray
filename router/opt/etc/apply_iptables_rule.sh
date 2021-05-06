@@ -12,7 +12,7 @@ echo '[0m[33mApplying iptables rule ...[0m'
 
 ipset_protocal_version=$(ipset -v |grep -o 'version.*[0-9]' |head -n1 |cut -d' ' -f2)
 
-if [ "$ipset_protocal_version" == 6 ]; then
+if [ "$ipset_protocal_version" -gt 6 ]; then
     alias iptables='/usr/sbin/iptables'
 else
     alias iptables='/opt/sbin/iptables'
