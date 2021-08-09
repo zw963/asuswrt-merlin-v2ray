@@ -37,32 +37,25 @@ set -eu
 
 package compile-tools
 
-v2ray_version=4.38.3
+v2ray_version=4.41.1
 arch=linux-64
 
 mkdir -p /usr/bin/v2ray
 download_and_extract https://github.com/v2fly/v2ray-core/releases/download/v${v2ray_version}/v2ray-${arch}.zip v2ray-v${v2ray_version}
-cd v2ray-v${v2ray_version} && rm *.sig && chmod +x v2ctl* v2ray*
+cd v2ray-v${v2ray_version} && chmod +x v2ctl v2ray
 
-v2ray_commands=$(find -maxdepth 1 -name 'v2ray_*')
-
-for v2ray_command in ./v2ray $v2ray_commands; do
-    if $v2ray_command -version &>/dev/null; then
-        valid_v2ray_command=$v2ray_command
-        valid_v2ctl_command=$(echo $v2ray_command |sed 's#v2ray#v2ctl#')
-        break
-    else
-        valid_v2ray_command=
-    fi
-done
-
-if [  -z "$valid_v2ray_command" ]; then
+if ! ./v2ray --version &>/dev/null; then
     echo 'Not valid v2ray version is supported by current router, please check if download correct version.'
     exit
-else
-    $valid_v2ray_command -version
-fi && cp v2ray v2ctl *.dat /usr/bin/v2ray &&
-    cp systemd/v2ray.service /etc/systemd/system
+fi
+
+cp v2ray v2ctl *.dat /usr/local/bin &&
+    cp systemd/system/*.service /etc/systemd/system
+
+replace_regex '/usr/local/etc/v2ray/config.json' '/etc/v2ray/config.json' /etc/systemd/system/v2ray.service
+replace_regex '/usr/local/etc/v2ray/%i.json' '/etc/v2ray/%i.json' /etc/systemd/system/v2ray@.service
+
+sudo chown -R nobody:nobody /var/log/v2ray/
 
 uuid=$(uuidgen)
 
