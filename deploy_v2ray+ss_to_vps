@@ -228,18 +228,19 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             {
                 "type": "field",
                 "domain": [
+                    "geosite:cn",
+                    "dl.google.com"
+                ],
+                "outboundTag": "direct"
+            },
+            {
+                "type": "field",
+                "domain": [
                     // 这里添加必须走 proxy 的域名例外.
                     "services.googleapis.cn",
                     "geosite:geolocation-!cn"
                 ],
                 "outboundTag": "proxy"
-            },
-            {
-                "type": "field",
-                "domain": [
-                    "geosite:cn"
-                ],
-                "outboundTag": "direct"
             },
             {
                 "type": "field",
