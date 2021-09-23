@@ -19,6 +19,8 @@ Since 2020-09-19, this project's release version just follow [V2Ray-core](https:
 - A VPS which can visit free internet.
 - A newer router which support [Entware](https://github.com/Entware/Entware), and can run V2ray comfortable.
   (i use ASUS RT-AC5300, I think OpenWRT should satisfied too after a little hack)
+- Update yours router firmware to [Asuswrt-merlin](https://github.com/RMerl/asuswrt-merlin.ng)
+- Initialize Entware, please follow this [wiki](https://github.com/RMerl/asuswrt-merlin.ng/wiki/Entware)
 - A local ssh client which can login to router use ssh key.
 - If VPS behind a firewall, (e.g. UCloud, Google Cloud), you need enable 22334/22335
 tcp/udp port on server manually.
