@@ -185,7 +185,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                     "geosite:cn"
                 ],
                 "expectIPs": [
-                    "geoip:cn"
+                    "ext:geoip-only-cn-private.dat:cn"
                 ]
             },
              // V2Ray 会使用 DNS over HTTPS (RFC8484, 简称DOH) 进行查询。
@@ -221,7 +221,8 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                 "type": "field",
                 "ip": [
                     "202.99.192.66",
-                    "geoip:cn"
+                    "ext:geoip-only-cn-private.dat:cn",
+                    "ext:geoip-only-cn-private.dat:private"
                 ],
                 "outboundTag": "direct"
             },

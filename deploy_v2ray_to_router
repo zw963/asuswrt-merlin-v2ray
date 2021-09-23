@@ -76,7 +76,7 @@ else
 fi
 
 if ./v2ray -version; then
-    cp v2ray v2ctl *.dat /opt/sbin/
+    cp v2ray v2ctl geosite.dat geoip-only-cn-private.dat /opt/sbin/
 else
     echo 'Not valid v2ray version is supported by current router, please download correct version.'
     exit
