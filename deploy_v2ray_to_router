@@ -42,9 +42,10 @@ set -eu
 # ssh 登陆路由器, 执行 entware-setup.sh, 选择 1'
 
 if ! opkg --version; then
-    echo 'Please initialise entware-ng if you run this first time.'
-    echo "e.g. plugin your's usb disk, and run \`entware-setup.sh', select 1."
     echo "Run \`opkg --version' failed."
+    echo 'Please initialise entware-ng first if you run this script the first time.'
+    echo "e.g. plugin your's usb disk, and run \`entware-setup.sh', select 1."
+    echo "Or run \`amtm' to initialize entware if you use a newer merlin firmware."
     exit
 fi
 
@@ -130,7 +131,7 @@ add_service wan-start 'cru a update_geosites "25 5 * * 0 /opt/etc/update_geosite
 
 /jffs/scripts/wan-start
 
-# Because newest asus merlin introduce AMPM, please enable swap file there if need it.
+# Because newest asus merlin introduce AMTM, please enable swap file there if need it.
 # 打开swap
 # echo 'Enabling swap'
 # /opt/etc/enable_swap.sh
