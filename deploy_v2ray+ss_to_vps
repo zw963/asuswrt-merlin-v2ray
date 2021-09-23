@@ -37,7 +37,7 @@ set -eu
 
 package compile-tools
 
-v2ray_version=4.41.1
+v2ray_version=4.42.2
 arch=linux-64
 
 mkdir -p /usr/bin/v2ray
@@ -228,8 +228,10 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             {
                 "type": "field",
                 "domain": [
+                    // 这里添加域名白名单.
                     "geosite:cn",
-                    "dl.google.com"
+                    "dl.google.com",
+                    "sourceforge.net"
                 ],
                 "outboundTag": "direct"
             },

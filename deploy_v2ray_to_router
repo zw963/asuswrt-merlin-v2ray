@@ -67,34 +67,20 @@ $RC start
 HEREDOC
 fi
 
-v2ray_version=4.41.1
-arch=linux-arm32-v5
 
 if [ -d predownloaded_binary ]; then
-    cd predownloaded_binary && unzip -o *.zip && chmod +x v2ctl* v2ray*
+    cd predownloaded_binary && unzip -o *.zip && chmod +x v2ctl v2ray
 else
-    download_and_extract https://github.com/v2fly/v2ray-core/releases/download/v${v2ray_version}/v2ray-${arch}.zip v2ray-v${v2ray_version}
-    cd v2ray-v${v2ray_version} && rm -f *.sig && chmod +x v2ctl* v2ray*
-fi
-v2ray_commands=$(/opt/bin/find -maxdepth 1 -name 'v2ray_*')
-
-for v2ray_command in ./v2ray $v2ray_commands; do
-    if $v2ray_command -version &>/dev/null; then
-        valid_v2ray_command=$v2ray_command
-        valid_v2ctl_command=$(echo $v2ray_command |sed 's#v2ray#v2ctl#')
-        break
-    else
-        valid_v2ray_command=
-    fi
-done
-
-if [  -z "$valid_v2ray_command" ]; then
-    echo 'Not valid v2ray version is supported by current router, please check if download correct version.'
+    echo "Predownloaded v2ray binary dont't exist!"
     exit
+fi
+
+if ./v2ray -version; then
+    cp v2ray v2ctl *.dat /opt/sbin/
 else
-    $valid_v2ray_command -version
-fi && cp $valid_v2ray_command $valid_v2ctl_command *.dat /opt/sbin/
-echo 'v2ray is installed'
+    echo 'Not valid v2ray version is supported by current router, please download correct version.'
+    exit
+fi
 
 cat <<'HEREDOC' > /opt/etc/init.d/S22v2ray
 #!/bin/sh
@@ -112,6 +98,8 @@ PATH=/opt/sbin:/opt/bin:/opt/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/u
 HEREDOC
 
 chmod +x /opt/etc/init.d/S22v2ray
+
+echo 'v2ray is installed'
 
 # ----------------------------------------------------
 #
