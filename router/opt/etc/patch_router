@@ -6,6 +6,8 @@ chmod +x /opt/etc/init.d/S22v2ray
 mkdir -p /var/log/v2ray/
 /opt/etc/init.d/S22v2ray restart
 
+echo '1000000' > /proc/sys/net/core/rmem_max
+
 /opt/etc/toggle_proxy.sh enable
 
 date "+%Y%m%d_%H:%M:%S" > /tmp/patch_router_was_run_at
