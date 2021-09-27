@@ -175,11 +175,12 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             "dns.google": "8.8.4.4"
         },
         "servers": [
+            // V2Ray 会使用 DNS over HTTPS (RFC8484, 简称DOH) 进行查询。
+            // DoH 默认走第一个 outbound 来查询 （DoH 域名需要在 hosts 中指定 IP 地址）
+            "8.8.4.4",
             {
-                // 如果 DNS 的域名满足指定的 domains 策略，则优先使用
-                // 202.99.192.66 来解析当前域名，而不是传过来的默认 8.8.4.4
-                // 这里的 202.99.192.66 也可以替换为 114.114.114.114
-                "address": "202.99.192.66",
+                // localhost 代表使用运营商的 DNS.
+                "address": "localhost",
                 "port": 53,
                 "domains": [
                     "geosite:cn"
@@ -187,23 +188,16 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                 "expectIPs": [
                     "ext:geoip-only-cn-private.dat:cn"
                 ]
-            },
-             // V2Ray 会使用 DNS over HTTPS (RFC8484, 简称DOH) 进行查询。
-             // DoH 默认走第一个 outbound 来查询 （DoH 域名需要在 hosts 中指定 IP 地址）
-             "8.8.4.4"
-        ]
+            }
+        ],
+        // 默认为 false, 开启后，如果通过默认的 DNS 访问返回结果不匹配 cn site/ip,
+        // 将使用 servers 里面的第一个，8.8.4.4 访问。
+        "disableFallback": true
     },
     "routing": {
         "domainStrategy": "IPIfNonMatch",
         "domainMatcher": "mph",
         "rules": [
-            {
-                "type": "field",
-                "protocol":[
-                    "bittorrent"
-                ],
-                "outboundTag": "direct"
-            },
             {
                 "type": "field",
                 "inboundTag": ["dns-inbound"],
@@ -212,15 +206,6 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             {
                 "type": "field",
                 "ip": [
-                    "8.8.4.4",
-                    "8.8.8.8"
-                ],
-                "outboundTag": "proxy"
-            },
-            {
-                "type": "field",
-                "ip": [
-                    "202.99.192.66",
                     "ext:geoip-only-cn-private.dat:cn",
                     "ext:geoip-only-cn-private.dat:private"
                 ],
@@ -240,8 +225,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                 "type": "field",
                 "domain": [
                     // 这里添加必须走 proxy 的域名例外.
-                    "services.googleapis.cn",
-                    "geosite:geolocation-!cn"
+                    "services.googleapis.cn"
                 ],
                 "outboundTag": "proxy"
             },
