@@ -213,47 +213,7 @@ router automatically.
 
 A success deploy on router should be looking like this.
 
-```sh
-╰─ $ ./deploy_v2ray_to_router admin@192.168.50.1
-v2ray.json                                                                                                                  100% 9051   803.2KB/s   00:00
-apply_iptables_rule.sh                                                                                                      100% 1940   295.9KB/s   00:00
-clean_iptables_rule.sh                                                                                                      100% 1072   129.9KB/s   00:00
-toggle_proxy.sh                                                                                                             100% 1680   185.4KB/s   00:00
-enable_swap.sh                                                                                                              100%  482    94.7KB/s   00:00
-patch_router                                                                                                                100%  214    29.2KB/s   00:00
-restart_dnsmasq.sh                                                                                                          100%   84    11.0KB/s   00:00
-update_geosite.sh                                                                                                           100%  599    70.5KB/s   00:00
-Copy predownloaded binary to router ...
-v2ray-linux-arm32-v5-4.32.0.zip                                                                                             100%   11MB   3.7MB/s   00:02
-***********************************************************
-Remote deploy scripts is started !!
-***********************************************************
-opkg version dcbc142e51f5f5f2fb9e4e44657e013d3c36a52b (2019-06-14)
-Archive:  v2ray-linux-arm32-v5-4.32.0.zip
-  inflating: config.json
-  inflating: geoip.dat
-  inflating: geosite.dat
-   creating: systemd/
-   creating: systemd/system/
-  inflating: systemd/system/v2ray.service
-  inflating: systemd/system/v2ray@.service
-  inflating: v2ctl
-  inflating: v2ray
-  inflating: vpoint_socks_vmess.json
-  inflating: vpoint_vmess_freedom.json
-V2Ray 4.32.0 (V2Fly, a community-driven edition of V2Ray.) Custom (go1.15.3 linux/arm)
-A unified platform for anti-censorship.
-v2ray is installed
- Checking v2ray...              alive.
- Shutting down v2ray...              done.
- Starting v2ray...              done.
- Starting v2ray...              done.
-Enabling proxy ...
- Starting v2ray...              already running.
-dnsmasq: syntax check OK.
-Proxy is enabled.
-Congratulations, Deploy succssful!
-```
+![patch_router](/images/patch_router.png)
 
 ## Contributing
 
