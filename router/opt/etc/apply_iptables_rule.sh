@@ -44,7 +44,13 @@ for local_ip in $LOCAL_IPS; do
 done
 iptables -t nat -A V2RAY_TCP -d $v2ray_server_ip -j RETURN
 
+# 如果是 V2Ray 标记过、并再次发出的流量(通过 streamSettings.sockopt.mark: 255),
+# 全部走直连，不这样做就成了死循环了。
 iptables -t nat -A V2RAY_TCP -p tcp -j RETURN -m mark --mark 0xff
+
+# REDIRECT其实是 DNAT 的一种特殊形式，
+# 特殊在其把数据包的目标 IP 改成了 127.0.0.1，端口改成了--to-ports 参数指定的本地端口，
+# 这样本机的透明代理程序就能处理这个包，应用能通过内核的状态信息拿到被改写之前的目标 IP 和端口号
 iptables -t nat -A V2RAY_TCP -p tcp -j REDIRECT --to-ports $local_v2ray_port
 # apply rule
 iptables -t nat -A PREROUTING -p tcp -j V2RAY_TCP

@@ -20,11 +20,13 @@ copy router/opt/etc/patch_router /opt/etc
 copy router/opt/etc/restart_dnsmasq.sh /opt/etc
 copy router/opt/etc/update_geosite.sh /opt/etc
 
-if [ -d predownloaded_binary ] && zip_file=$(ls -1 predownloaded_binary/*.zip |head -n1); then
+if [ -d predownloaded_binary ] && zip_file=$(ls -1 predownloaded_binary/v2ray-linux-arm*.zip |head -n1); then
     echo 'Copy predownloaded binary to router ...'
     copy $zip_file $zip_file
 else
     ssh "$*" "rm -rf predownloaded_binary"
+    echo 'Please download predownloaded binary into predownloaded_binary folder.'
+    exit 1
 fi
 
 deploy_start
@@ -68,13 +70,7 @@ $RC start
 HEREDOC
 fi
 
-
-if [ -d predownloaded_binary ]; then
-    cd predownloaded_binary && unzip -o *.zip && chmod +x v2ctl v2ray
-else
-    echo "Predownloaded v2ray binary dont't exist!"
-    exit
-fi
+cd predownloaded_binary && unzip -o v2ray-linux-arm*.zip && chmod +x v2ctl v2ray
 
 if ./v2ray -version; then
     cp v2ray v2ctl geosite.dat geoip-only-cn-private.dat /opt/sbin/
