@@ -94,9 +94,7 @@ PATH=/opt/sbin:/opt/bin:/opt/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/u
 . /opt/etc/init.d/rc.func
 HEREDOC
 
-chmod +x /opt/etc/init.d/S22v2ray
-
-echo 'v2ray is installed'
+echo 'v2ray was installed.'
 
 # ----------------------------------------------------
 #
@@ -124,7 +122,6 @@ add_service wan-start 'cru a run-services "*/3 * * * * /jffs/scripts/services-st
 add_service wan-start 'cru a run-iptables "*/3 * * * * /opt/etc/apply_iptables_rule.sh"'
 # 每个周日的 5: 25 升级一次 geosites 数据.
 add_service wan-start 'cru a update_geosites "25 5 * * 0 /opt/etc/update_geosite.sh"'
-
 /jffs/scripts/wan-start
 
 # Because newest asus merlin introduce AMTM, please enable swap file there if need it.
@@ -136,12 +133,6 @@ add_service wan-start 'cru a update_geosites "25 5 * * 0 /opt/etc/update_geosite
 # 如果 DHCP 重新分配 IP 地址时, 会清除 iptables rule, 此时重新应用 iptables
 add_service dhcpc-event '/opt/etc/apply_iptables_rule.sh'
 
-set +e
-/jffs/scripts/services-stop
-set -e
-/jffs/scripts/services-start
-
-# 在所有服务启动之后, 运行 /opt/etc/patch_router 为 dnsmasq 追加配置, 并重启 dnsmasq 服务.
 add_service services-start '[ -f /tmp/patch_router_was_run_at ] || /opt/etc/patch_router'
 /opt/etc/patch_router
 

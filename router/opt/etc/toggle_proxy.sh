@@ -6,7 +6,7 @@
 dnsmasq_dir=/opt/etc/dnsmasq.d
 
 function disable_proxy () {
-    echo '[0m[33mDisabling proxy ...[0m'
+    echo '[0m[0;33m => Disabling proxy ...[0m'
 
     /opt/etc/clean_iptables_rule.sh && chmod -x /opt/etc/apply_iptables_rule.sh
     chmod -x /opt/etc/init.d/S22v2ray && sh /opt/etc/init.d/S22v2ray stop
@@ -16,11 +16,11 @@ function disable_proxy () {
         chmod +x /opt/etc/restart_dnsmasq.sh && /opt/etc/restart_dnsmasq.sh
     fi
 
-    echo '[0m[33mProxy is disabled.[0m'
+    echo '[0m[0;33m => Proxy is disabled.[0m'
 }
 
 function enable_proxy () {
-    echo '[0m[33mEnabling proxy ...[0m'
+    echo '[0m[0;33m => Enabling proxy ...[0m'
 
     chmod +x /opt/etc/apply_iptables_rule.sh && /opt/etc/apply_iptables_rule.sh
     chmod +x /opt/etc/init.d/S22v2ray && /opt/etc/init.d/S22v2ray start
@@ -42,7 +42,7 @@ function enable_proxy () {
 
     chmod +x /opt/etc/restart_dnsmasq.sh && /opt/etc/restart_dnsmasq.sh
 
-    echo '[0m[33mProxy is enabled.[0m'
+    echo '[0m[0;33m => Proxy is enabled.[0m'
 }
 
 if [ "$1" == 'disable' ]; then

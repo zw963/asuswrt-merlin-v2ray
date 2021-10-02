@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo '[0m[33mCleaning iptables rule ...[0m'
+echo -n 'Cleaning iptables rule ...'
 
 # clean old version rule, maybe delete later.
 while iptables -t nat -C PREROUTING -p tcp -j V2RAY_TCP 2>/dev/null; do
@@ -25,4 +25,4 @@ iptables -t mangle -X V2RAY_MARK 2>/dev/null          # --delete-chain
 ip route del local default dev lo table 100 2>/dev/null
 ip rule del fwmark 1 table 100 2>/dev/null
 
-echo '[0m[33mDone clean iptables rule.[0m'
+echo '[0m[1;32m done.[0m'

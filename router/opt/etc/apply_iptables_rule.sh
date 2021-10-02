@@ -4,13 +4,14 @@ if [ -t 1 ]; then
     /opt/etc/clean_iptables_rule.sh
 fi
 
-if iptables -t nat -C PREROUTING -p tcp -j V2RAY_TCP 2>/dev/null; then
+if iptables -t nat -C PREROUTING -p tcp -j V2RAY_TCP 2>/dev/null ||
+        iptables -t mangle -C PREROUTING -j V2RAY_UDP 2>/dev/null; then
     exit 0
 fi
 
-echo '[0m[33mApplying iptables rule ...[0m'
+echo -n 'Applying iptables rule ...'
 
-ipset_protocal_version=$(ipset -v |grep -o 'version.*[0-9]' |head -n1 |cut -d' ' -f2)
+ipset_protocal_version=$(ipset -v 2>/dev/null |grep -o 'version.*[0-9]' |head -n1 |cut -d' ' -f2)
 
 if [ "$ipset_protocal_version" -gt 6 ]; then
     alias iptables='/usr/sbin/iptables'
@@ -40,7 +41,7 @@ LOCAL_IPS="
 "
 
 function apply_redirect_rule () {
-    echo 'Applying redirect rule.'
+    echo ' Applying redirect rule ...'
     iptables -t nat -N V2RAY_TCP # 代理局域网 TCP 流量
     for local_ip in $LOCAL_IPS; do
         iptables -t nat -A V2RAY_TCP -d $local_ip -j RETURN
@@ -60,7 +61,7 @@ function apply_redirect_rule () {
 }
 
 function apply_tproxy_rule () {
-    echo 'Apply TProxy rule.'
+    echo -n ' Applying TProxy rule ...'
     # 使用一个特殊的路由，将数据包指向本地
     ip rule add fwmark 1 table 100
     ip route add local default dev lo table 100
@@ -74,8 +75,8 @@ function apply_tproxy_rule () {
 
     iptables -t mangle -A V2RAY_UDP -d $v2ray_server_ip -j RETURN
 
-    # iptables -t mangle -A V2RAY -d 192.168.0.0/16 -p tcp -j RETURN
-    # iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN # 本地局域网内，除了发至 53 端口的流量，其余全部直连.
+    # 本地局域网内，除了发至 53 端口的流量(会被 tproxy 标记)，其余全部直连.
+    iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
 
     iptables -t mangle -A V2RAY_UDP -p udp -j TPROXY --on-port $local_v2ray_port --tproxy-mark 1
     iptables -t mangle -A V2RAY_UDP -p tcp -j TPROXY --on-port $local_v2ray_port --tproxy-mark 1
@@ -104,4 +105,4 @@ else
     apply_redirect_rule
 fi
 
-echo '[0m[33mDone apply iptables rule.[0m'
+echo '[0m[1;32m done.[0m'
