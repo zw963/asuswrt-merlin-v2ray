@@ -123,17 +123,17 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
 
         //    [公共步骤]
         //    - 在 ASUS 路由器上，启动 V2Ray, 并且监听 65053 端口。
-        //    - 浏览器访问针对路由器 53 端口（dnsmasq）发送 ip111 或 google 的 DNS 查询。
-        //    - dnsmasq forward 所有 DNS 查询到 V2Ray 监听的本地 65053 端口。
-        //    - 首次查询路由： 因为匹配 dns-inbound 中的端口， 因此
+        //    - 用户输入域名，例如：ip111 或 google。
+        //    - 域名发动到路由器 dnsmasq 监听的 53 端口。
+        //    - dnsmasq forward 所有（没有cache的查询 DNS 查询）到 V2Ray 监听的本地 65053 端口。
+        //    - 首次查询路由： 因为匹配 dns-inbound 中监听的端口,
         //      所有发送到 65053 的内容，会被转发到到 8.8.4.4:53，并且通过对应的
         //      dns-outbound 中的 DNS 协议，将IP 查询（即 A 和 AAAA）转发给内置的 DNS 服务器.
-        //    - 注意： servers 匹配中， 按照域名(www.ip111.cn)匹配具有最高优先级。
 
-        //    [访问国内网址 www.ip111.cn]
-        //    - 首先会使用 dns 配置中的 domains 策略对 www.ip111.cn 进行匹配.
-        //      优先使用 202.99.192.66 对域名进行解析，得到的 ip 地址是浙江阿里云，
-        //      符合 geosite:cn 以及 expected ip 是 geoip:cn，因此匹配。
+        //    [访问国内网址 ip111.cn]
+        //    - 首先会使用 dns 配置中的 domains 策略对 ip111.cn 进行匹配.
+        //    - 因为 ip111.cn 域名属于 geosite:cn, 返回的 ip 为 121.41.110.161。
+        //    - 该 IP 属于浙江阿里云，属于 geoip:cn, 因此匹配，DNS 请求结束。
         //    - 第一次进入路由: 内置 DNS 发出的 DNS 请求也会按照路由规则走, 确定使用
         //      什么线路来从 202.99.192.66 获取 ip111 的地址,202.99.192.66 匹配 geoip:cn,
         //      判定因此使用直连.(outboundTag: direct)
@@ -143,7 +143,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
         //      走系统非加密直连，向 121.41.110.161 建立连接, 开始通信。
 
         //    [访问国外网址 twitter.com]
-        //    - 首先会使用 dns 配置中的 domains 策略对 twitter.com 进行匹配.
+        //    - 仍然会使用 dns 配置中的 domains 策略对 twitter.com 进行匹配.
         //      尝试使用 202.99.192.66, 因为国内的 DNS 返回的 ip 地址是一个国外的废弃 ip,
         //      此时不满足 expectIPs, 因此不匹配.
         //    - 内置的 DNS 向 https://dns.google/dns-query 发起针对 twitter.com 的请求.
@@ -240,25 +240,32 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
     },
     "inbounds": [
         {
+            "tag":"transparent",
             "protocol": "dokodemo-door",
-            "port": 1081, // 监听端口
+            "port": 1081, // 监听 1081 端口
             "sniffing": {
                 "enabled": true,
-                "destOverride": [
-                    "http",
-                    "tls"
-                ]
+                "destOverride": ["http","tls"]
             },
             "settings": {
                 "network": "tcp,udp",
                 // 当值为 true 时，dokodemo-door 会识别出由 iptables 转发而来的数据，并转发到相应的目标地址。详见 传输配置 中的 tproxy 设置。
                 "followRedirect": true
+            },
+            "streamSettings": {
+                "sockopt": {
+                    // 当 Dokodemo-door 中指定了 followRedirect，且 sockopt.tproxy 为空时，
+                    // sockopt.tproxy 的值会被设为 "redirect"
+                    // 因此下面的设定对于 redirect 模式非必须的。
+                    // 但是为了根据不同的模式，方便替换，还是加上。
+                    "tproxy": "redirect"
+                }
             }
         },
         {
             "tag": "dns-inbound",
             "protocol": "dokodemo-door",
-            "port": 65053,
+            "port": 65053, // 监听 65053 端口 （DNS)
             "settings": {
                 // 这里是流量被转发到的地址，端口，可接受的网络协议类型
                 // 注意： 这有别于 dns-outbound 中对应的配置，后者是直接修改 DNS 服务器地址/端口
@@ -273,10 +280,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             "port": 1080, // 监听端口
             "sniffing": {
                 "enabled": true,
-                "destOverride": [
-                    "http",
-                    "tls"
-                ]
+                "destOverride": ["http","tls"]
             },
             "settings": {
                 "auth": "noauth"  //socks的认证设置，noauth 代表不认证，由于 socks 通常在客户端使用，所以这里不认证
@@ -319,7 +323,6 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                     }
                 },
                 "sockopt": {
-                    "tproxy": "redirect",
                     "mark": 255
                 }
             }
@@ -338,10 +341,14 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             }
         },
         {
-            // 这个 dns-outbound 存在的唯一目的是:
             // 识别这是一个 DNS 请求， 并发送到内部 DNS 进行查询.
             "tag": "dns-outbound",
-            "protocol": "dns"
+            "protocol": "dns",
+            "streamSettings": {
+                "sockopt": {
+                    "mark": 255
+                }
+            }
         },
         {
             "tag": "direct",
