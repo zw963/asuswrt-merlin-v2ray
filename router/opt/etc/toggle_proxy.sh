@@ -32,13 +32,14 @@ function enable_proxy () {
         echo "conf-dir=$dnsmasq_dir/,*.conf" >> /etc/dnsmasq.conf
     fi
 
+    echo 'server=/#/127.0.0.1#65053' > $dnsmasq_dir/v2ray.conf
+
     # 开启日志.
     # if ! grep -qs "^log-queries$" /etc/dnsmasq.conf; then
-    #     echo 'log-queries' >> /etc/dnsmasq.conf
-    #     echo 'log-facility=/var/log/dnsmasq.log' >> /etc/dnsmasq.conf
+    #     echo 'log-queries' >> $dnsmasq_dir/v2ray.conf
+    #     echo 'log-facility=/var/log/dnsmasq.log' >> $dnsmasq_dir/v2ray.conf
     # fi
 
-    echo 'server=/#/127.0.0.1#65053' > $dnsmasq_dir/v2ray.conf
     chmod +x /opt/etc/restart_dnsmasq.sh && /opt/etc/restart_dnsmasq.sh
 
     echo '[0m[33mProxy is enabled.[0m'
