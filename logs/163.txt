@@ -1,0 +1,46 @@
+1.
+2021/10/02 10:51:24 [Debug] [3972196959] proxy/dokodemo: processing connection from: 127.0.0.1:39122
+2021/10/02 10:51:24 [Info] [3972196959] proxy/dokodemo: received request for 127.0.0.1:39122
+2021/10/02 10:51:24 [Info] [3972196959] app/dispatcher: taking detour [dns-outbound] for [udp:8.8.4.4:53]
+2021/10/02 10:51:24 [Info] [3972196959] proxy/dns: handling DNS traffic to udp:8.8.4.4:53
+2021/10/02 10:51:24 127.0.0.1:39122 accepted udp:8.8.4.4:53 [dns-outbound]
+2021/10/02 10:51:24 [Debug] app/dns: domain mirrors.163.com matches following rules: [geosite:cn(DNS idx:1)]
+2021/10/02 10:51:24 [Debug] app/dns: domain mirrors.163.com will use DNS in order: [localhost]
+2021/10/02 10:51:24 [Info] app/dns: failed to lookup ip for domain mirrors.163.com at server localhost > empty response
+
+2.
+2021/10/02 10:51:24 [Debug] [3228660718] proxy/dokodemo: processing connection from: 127.0.0.1:44448
+2021/10/02 10:51:24 [Info] [3228660718] proxy/dokodemo: received request for 127.0.0.1:44448
+2021/10/02 10:51:24 [Info] [3228660718] app/dispatcher: taking detour [dns-outbound] for [udp:8.8.4.4:53]
+2021/10/02 10:51:24 [Info] [3228660718] proxy/dns: handling DNS traffic to udp:8.8.4.4:53
+2021/10/02 10:51:24 127.0.0.1:44448 accepted udp:8.8.4.4:53 [dns-outbound]
+2021/10/02 10:51:24 [Debug] app/dns: domain mirrors.163.com matches following rules: [geosite:cn(DNS idx:1)]
+2021/10/02 10:51:24 [Debug] app/dns: domain mirrors.163.com will use DNS in order: [localhost]
+2021/10/02 10:51:24 [Info] app/dns: Localhost got answer: mirrors.163.com -> [42.237.112.198 61.163.51.229 61.163.51.230 61.163.51.231 42.237.112.199]
+2021/10/02 10:51:24 [Debug] app/dns: domain mirrors.163.com expectIPs [42.237.112.198 61.163.51.229 61.163.51.230 61.163.51.231 42.237.112.199] matched at server localhost
+
+上面的 1. 和 2. 是几乎一样的两个获取 DNS 的过程，，但是，1 返回空结果，2 匹配并返回正确的 ip，为啥总是会有两次 DNS 查询？（是不是和我配置有关？)
+
+# 启动一个新线程，执行 DNS 的 routing 过程，在这个过程中，要判断到底使用什么线路。
+2021/10/02 10:51:24 [Debug] [744088798] proxy/dokodemo: processing connection from: 192.168.50.87:41422
+2021/10/02 10:51:24 [Info] [744088798] proxy/dokodemo: received request for 192.168.50.87:41422
+
+# 从 IP 嗅探到原始的域名？
+2021/10/02 10:51:24 [Info] [744088798] app/dispatcher: sniffed domain: mirrors.163.com
+
+# 通过 routing 的过程，确定线路采用直连？
+2021/10/02 10:51:24 [Info] [744088798] app/dispatcher: taking detour [direct] for [tcp:mirrors.163.com:80]
+
+# 准备开始建立连接。
+2021/10/02 10:51:24 [Info] [744088798] proxy/freedom: opening connection to tcp:mirrors.163.com:80
+
+# 我很奇怪，为啥到这一步了，为啥还要进入 DNS 路由，来获取 IP？
+2021/10/02 10:51:24 [Debug] app/dns: domain mirrors.163.com matches following rules: [geosite:cn(DNS idx:1)]
+2021/10/02 10:51:24 [Debug] app/dns: domain mirrors.163.com will use DNS in order: [localhost]
+
+2021/10/02 10:51:24 192.168.50.87:41422 accepted tcp:42.237.112.198:80 [direct]
+2021/10/02 10:51:24 [Info] [744088798] proxy/freedom: dialing to tcp:61.163.51.231:80
+2021/10/02 10:51:24 [Info] [744088798] transport/internet/tcp: dialing TCP to tcp:61.163.51.231:80
+
+2021/10/02 10:51:24 [Info] app/dns: Localhost got answer: mirrors.163.com -> [61.163.51.231 42.237.112.199 42.237.112.198 61.163.51.229 61.163.51.230]
+2021/10/02 10:51:24 [Debug] app/dns: domain mirrors.163.com expectIPs [61.163.51.231 42.237.112.199 42.237.112.198 61.163.51.229 61.163.51.230] matched at server localhost

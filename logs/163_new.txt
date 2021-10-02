@@ -1,0 +1,37 @@
+1. 
+2021/10/02 13:39:21 [Debug] transport/internet/udp: UDP original destination: udp:192.168.50.1:53
+2021/10/02 13:39:21 [Debug] transport/internet/udp: UDP original destination: udp:192.168.50.1:53
+
+2021/10/02 13:39:21 [Debug] [441384725] proxy/dokodemo: processing connection from: 192.168.50.87:50394
+2021/10/02 13:39:21 [Info] [441384725] proxy/dokodemo: received request for 192.168.50.87:50394
+2021/10/02 13:39:21 [Info] [441384725] app/dispatcher: taking detour [dns-outbound] for [udp:192.168.50.1:53]
+2021/10/02 13:39:21 [Info] [441384725] proxy/dns: handling DNS traffic to udp:192.168.50.1:53
+2021/10/02 13:39:21 192.168.50.87:50394 accepted udp:192.168.50.1:53 [dns-outbound]
+2021/10/02 13:39:21 [Debug] app/dns: domain mirrors.163.com matches following rules: [geosite:cn(DNS idx:1)]
+2021/10/02 13:39:21 [Debug] app/dns: domain mirrors.163.com will use DNS in order: [localhost]
+2021/10/02 13:39:21 [Debug] app/dns: domain mirrors.163.com matches following rules: [geosite:cn(DNS idx:1)]
+2021/10/02 13:39:21 [Debug] app/dns: domain mirrors.163.com will use DNS in order: [localhost]
+2021/10/02 13:39:21 [Info] app/dns: Localhost got answer: mirrors.163.com -> [42.237.112.198 61.163.51.229 61.163.51.230 42.237.112.199 61.163.51.231]
+2021/10/02 13:39:21 [Info] app/dns: failed to lookup ip for domain mirrors.163.com at server localhost > empty response
+2021/10/02 13:39:21 [Debug] app/dns: domain mirrors.163.com expectIPs [42.237.112.198 61.163.51.229 61.163.51.230 42.237.112.199 61.163.51.231] matched at server localhost
+
+
+2021/10/02 13:39:21 [Debug] [638334967] proxy/dokodemo: processing connection from: 192.168.50.87:41424
+2021/10/02 13:39:21 [Info] [638334967] proxy/dokodemo: received request for 192.168.50.87:41424
+2021/10/02 13:39:21 192.168.50.87:41424 accepted tcp:42.237.112.198:80 [direct]
+
+
+2021/10/02 13:39:21 [Info] [638334967] app/dispatcher: sniffed domain: mirrors.163.com
+
+2021/10/02 13:39:21 [Info] [638334967] app/dispatcher: taking detour [direct] for [tcp:mirrors.163.com:80]
+
+2021/10/02 13:39:21 [Info] [638334967] proxy/freedom: opening connection to tcp:mirrors.163.com:80
+
+2021/10/02 13:39:21 [Debug] app/dns: domain mirrors.163.com matches following rules: [geosite:cn(DNS idx:1)]
+2021/10/02 13:39:21 [Debug] app/dns: domain mirrors.163.com will use DNS in order: [localhost]
+
+2021/10/02 13:39:21 [Info] app/dns: Localhost got answer: mirrors.163.com -> [61.163.51.231 42.237.112.199 61.163.51.230 61.163.51.229 42.237.112.198]
+2021/10/02 13:39:21 [Debug] app/dns: domain mirrors.163.com expectIPs [61.163.51.231 42.237.112.199 61.163.51.230 61.163.51.229 42.237.112.198] matched at server localhost
+
+2021/10/02 13:39:21 [Info] [638334967] proxy/freedom: dialing to tcp:61.163.51.230:80
+2021/10/02 13:39:21 [Info] [638334967] transport/internet/tcp: dialing TCP to tcp:61.163.51.230:80

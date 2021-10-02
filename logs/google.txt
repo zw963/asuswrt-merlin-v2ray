@@ -1,0 +1,79 @@
+1.
+2021/10/02 12:06:01 [Debug] [2102673956] proxy/dokodemo: processing connection from: 127.0.0.1:50512
+2021/10/02 12:06:01 [Info] [2102673956] proxy/dokodemo: received request for 127.0.0.1:50512
+2021/10/02 12:06:01 [Info] [2102673956] app/dispatcher: taking detour [dns-outbound] for [udp:8.8.4.4:53]
+2021/10/02 12:06:01 [Info] [2102673956] proxy/dns: handling DNS traffic to udp:8.8.4.4:53
+2021/10/02 12:06:01 127.0.0.1:50512 accepted udp:8.8.4.4:53 [dns-outbound]
+2021/10/02 12:06:01 [Info] app/dispatcher: default route for udp:8.8.4.4:53
+2021/10/02 12:06:01 [Debug] app/dns: domain google.com will use the first DNS: [UDP:8.8.4.4:53]
+2021/10/02 12:06:01 [Debug] app/dns: UDP:8.8.4.4:53 querying DNS for: google.com.
+2021/10/02 12:06:01 [Debug] transport/internet/udp: dispatch request to: udp:8.8.4.4:53
+2021/10/02 12:06:01 connection doesn't allow setting of receive buffer size. Not a *net.UDPConn?. See https://github.com/lucas-clemente/quic-go/wiki/UDP-Receive-Buffer-Size for details.
+
+2. 
+2021/10/02 12:06:01 [Debug] [1978390392] proxy/dokodemo: processing connection from: 127.0.0.1:37974
+2021/10/02 12:06:01 [Info] [1978390392] proxy/dokodemo: received request for 127.0.0.1:37974
+2021/10/02 12:06:01 [Info] [1978390392] app/dispatcher: taking detour [dns-outbound] for [udp:8.8.4.4:53]
+2021/10/02 12:06:01 [Info] [1978390392] proxy/dns: handling DNS traffic to udp:8.8.4.4:53
+2021/10/02 12:06:01 127.0.0.1:37974 accepted udp:8.8.4.4:53 [dns-outbound]
+2021/10/02 12:06:01 [Debug] app/dns: domain google.com will use the first DNS: [UDP:8.8.4.4:53]
+2021/10/02 12:06:01 [Debug] app/dns: UDP:8.8.4.4:53 querying DNS for: google.com.
+2021/10/02 12:06:01 [Debug] transport/internet/udp: dispatch request to: udp:8.8.4.4:53
+2021/10/02 12:06:01 [Info] transport/internet/udp: establishing new connection for udp:8.8.4.4:53
+
+# 上面两段还是 DNS 请求的过程，和直连不同的是，因为没有匹配，因此，使用 first DNS: [UDP:8.8.4.4:53]。
+
+# 并且使用 proxy 连接
+2021/10/02 12:06:01 [Info] proxy/vmess/outbound: tunneling request to udp:8.8.4.4:53 via tcp:***REMOVED***:22334
+
+# 通过 proxy，得到 IP 地址。
+2021/10/02 12:06:01 [Info] app/dns: UDP:8.8.4.4:53 got answer: google.com. TypeA -> [172.217.24.78] 317.206186ms
+2021/10/02 12:06:01 [Debug] app/dns: UDP:8.8.4.4:53 updating IP records for domain:google.com.
+2021/10/02 12:06:01 [Info] app/dns: UDP:8.8.4.4:53 got answer: google.com. TypeAAAA -> [[2404:6800:4005:81d::200e]] 350.063125ms
+2021/10/02 12:06:01 [Debug] app/dns: UDP:8.8.4.4:53 updating IP records for domain:google.com.
+
+
+2021/10/02 12:06:02 [Debug] [291066617] proxy/dokodemo: processing connection from: 192.168.50.87:48868
+2021/10/02 12:06:02 [Info] [291066617] proxy/dokodemo: received request for 192.168.50.87:48868
+
+# 又是同样的还原 ip 到 google.com
+2021/10/02 12:06:02 [Info] [291066617] app/dispatcher: sniffed domain: google.com
+
+# 因为没找到 google.com，因此使用默认路由。
+2021/10/02 12:06:02 [Info] [291066617] app/dispatcher: default route for tcp:google.com:80
+
+# 决定使用 proxy
+2021/10/02 12:06:02 [Info] [291066617] proxy/vmess/outbound: tunneling request to tcp:google.com:80 via tcp:***REMOVED***:22334
+2021/10/02 12:06:02 192.168.50.87:48868 accepted tcp:172.217.24.78:80 [proxy]
+
+
+# 下面又是两段一样的日志，大概就是使用 proxy 连接后，再次查询域名
+2021/10/02 12:06:09 [Debug] [1058671971] proxy/dokodemo: processing connection from: 127.0.0.1:44730
+2021/10/02 12:06:09 [Info] [1058671971] proxy/dokodemo: received request for 127.0.0.1:44730
+2021/10/02 12:06:09 [Info] [1058671971] app/dispatcher: taking detour [dns-outbound] for [udp:8.8.4.4:53]
+2021/10/02 12:06:09 [Info] [1058671971] proxy/dns: handling DNS traffic to udp:8.8.4.4:53
+2021/10/02 12:06:09 [Debug] app/dns: domain www.google.com will use the first DNS: [UDP:8.8.4.4:53]
+2021/10/02 12:06:09 [Debug] app/dns: UDP:8.8.4.4:53 querying DNS for: www.google.com.
+2021/10/02 12:06:09 127.0.0.1:44730 accepted udp:8.8.4.4:53 [dns-outbound]
+2021/10/02 12:06:09 [Debug] transport/internet/udp: dispatch request to: udp:8.8.4.4:53
+
+2021/10/02 12:06:09 [Debug] [4116343107] proxy/dokodemo: processing connection from: 127.0.0.1:50977
+2021/10/02 12:06:09 [Info] [4116343107] proxy/dokodemo: received request for 127.0.0.1:50977
+2021/10/02 12:06:09 [Info] [4116343107] app/dispatcher: taking detour [dns-outbound] for [udp:8.8.4.4:53]
+2021/10/02 12:06:09 [Info] [4116343107] proxy/dns: handling DNS traffic to udp:8.8.4.4:53
+2021/10/02 12:06:09 [Debug] app/dns: domain www.google.com will use the first DNS: [UDP:8.8.4.4:53]
+2021/10/02 12:06:09 [Debug] app/dns: UDP:8.8.4.4:53 querying DNS for: www.google.com.
+2021/10/02 12:06:09 127.0.0.1:50977 accepted udp:8.8.4.4:53 [dns-outbound]
+2021/10/02 12:06:09 [Debug] transport/internet/udp: dispatch request to: udp:8.8.4.4:53
+
+# 返回域名结果，建立连接。
+2021/10/02 12:06:09 [Info] app/dns: UDP:8.8.4.4:53 got answer: www.google.com. TypeAAAA -> [[2404:6800:4005:812::2004]] 104.562358ms
+2021/10/02 12:06:09 [Debug] app/dns: UDP:8.8.4.4:53 updating IP records for domain:www.google.com.
+2021/10/02 12:06:09 [Info] app/dns: UDP:8.8.4.4:53 got answer: www.google.com. TypeA -> [142.250.204.36] 105.210502ms
+2021/10/02 12:06:09 [Debug] app/dns: UDP:8.8.4.4:53 updating IP records for domain:www.google.com.
+2021/10/02 12:06:11 [Debug] [461161804] proxy/dokodemo: processing connection from: 192.168.50.87:34074
+2021/10/02 12:06:11 [Info] [461161804] proxy/dokodemo: received request for 192.168.50.87:34074
+2021/10/02 12:06:11 [Info] [461161804] app/dispatcher: sniffed domain: www.google.com
+2021/10/02 12:06:11 [Info] [461161804] app/dispatcher: default route for tcp:www.google.com:80
+2021/10/02 12:06:11 [Info] [461161804] proxy/vmess/outbound: tunneling request to tcp:www.google.com:80 via tcp:***REMOVED***:22334
+2021/10/02 12:06:11 192.168.50.87:34074 accepted tcp:142.250.204.36:80 [proxy]
