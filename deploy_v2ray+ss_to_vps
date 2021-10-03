@@ -242,7 +242,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
         {
             "tag":"transparent",
             "protocol": "dokodemo-door",
-            "port": 1081, // 监听 1081 端口
+            "port": 1081, // 监听
             "sniffing": {
                 "enabled": true,
                 "destOverride": ["http","tls"]
@@ -255,17 +255,17 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             "streamSettings": {
                 "sockopt": {
                     // 当 Dokodemo-door 中指定了 followRedirect，且 sockopt.tproxy 为空时，
-                    // sockopt.tproxy 的值会被设为 "redirect"
-                    // 因此下面的设定对于 redirect 模式非必须的。
-                    // 但是为了根据不同的模式，方便替换，还是加上。
+                    // sockopt.tproxy 的值会被设为 "redirect"，因此该设定 redirect 模式非必须的。
+                    // 下面的选项会在 patch_router 的时候，自动选择 tproxy/redirect, 并被替换。
                     "tproxy": "redirect"
                 }
             }
         },
         {
+            // redirect 透明代理必需(不支持tproxy时), 用来接受从 dnsmasq 转发过来的 DNS 流量。
             "tag": "dns-inbound",
             "protocol": "dokodemo-door",
-            "port": 65053, // 监听 65053 端口 （DNS)
+            "port": 65053, // 监听 DNS
             "settings": {
                 // 这里是流量被转发到的地址，端口，可接受的网络协议类型
                 // 注意： 这有别于 dns-outbound 中对应的配置，后者是直接修改 DNS 服务器地址/端口

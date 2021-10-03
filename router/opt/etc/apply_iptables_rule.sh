@@ -41,7 +41,7 @@ LOCAL_IPS="
 "
 
 function apply_redirect_rule () {
-    echo ' Applying redirect rule ...'
+    echo -n ' Applying redirect rule ...'
     iptables -t nat -N V2RAY_TCP # 代理局域网 TCP 流量
     for local_ip in $LOCAL_IPS; do
         iptables -t nat -A V2RAY_TCP -d $local_ip -j RETURN
