@@ -2,7 +2,7 @@
 
 # [ -t 1 ] || sleep 10
 
-echo '1000000' > /proc/sys/net/core/rmem_max
+echo '2500000' > /proc/sys/net/core/rmem_max
 
 /opt/etc/toggle_proxy.sh disable
 echo '--------------'

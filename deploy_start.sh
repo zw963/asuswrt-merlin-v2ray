@@ -389,7 +389,7 @@ function perl_replace() {
     replace=$2
     escaped_replace=$(echo "$replace" |sed 's#"#\\"#g')
 
-    perl -i -ne "s$regexp$replaceg; print \$_; unless ($& eq \"\") {print STDERR \"\`\033[0;33m$&\033[0m' is replace with \`\033[0;33m${escaped_replace}\033[0m'\n\"};" "${@:3}"
+    perl -i -ne "s$regexp$replacegs; print \$_; unless ($& eq \"\") {print STDERR \"\`\033[0;33m$&\033[0m' is replace with \`\033[0;33m${escaped_replace}\033[0m'\n\"};" "${@:3}"
 }
 
 # 为了支持多行匹配，使用 perl 正则, 比 sed 好用一百倍！
