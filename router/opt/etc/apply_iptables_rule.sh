@@ -34,7 +34,6 @@ LOCAL_IPS="
 127.0.0.0/8
 169.254.0.0/16
 172.16.0.0/12
-192.168.0.0/16
 224.0.0.0/4
 240.0.0.0/4
 255.255.255.255/32
@@ -46,6 +45,7 @@ function apply_redirect_rule () {
     for local_ip in $LOCAL_IPS; do
         iptables -t nat -A V2RAY_TCP -d $local_ip -j RETURN
     done
+    iptables -t nat -A V2RAY_TCP -d 192.168.0.0/16 -j RETURN
     iptables -t nat -A V2RAY_TCP -d $v2ray_server_ip -j RETURN
     # 如果是 V2Ray 标记过、并再次发出的流量(通过 streamSettings.sockopt.mark: 255 设置),
     # 全部走直连，不这样做就成了死循环了。
@@ -75,6 +75,7 @@ function apply_tproxy_rule () {
 
     iptables -t mangle -A V2RAY_UDP -d $v2ray_server_ip -j RETURN
 
+    iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p tcp -j RETURN
     # 本地局域网内，除了发至 53 端口的流量(会被 tproxy 标记)，其余全部直连.
     iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
 
