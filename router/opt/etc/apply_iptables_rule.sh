@@ -19,14 +19,19 @@ else
     alias iptables='/opt/sbin/iptables'
 fi
 
-local_v2ray_port=$(cat /opt/etc/v2ray.json |grep '"inbounds"' -A10 |grep '"protocol" *: *"dokodemo-door"' -A10 |grep '"port"' |grep -o '[0-9]*')
+local_v2ray_port=$(cat /opt/etc/v2ray.json |grep '"inbounds"' -A10 |grep '"protocol" *: *"dokodemo-door"' -A10 |grep -o '"port": [0-9]*,' |grep -o '[0-9]*')
 
 if [ -z "$local_v2ray_port" ]; then
     echo 'can not find out v2ray port setting in /opt/etc/v2ray.json'
     exit
 fi
 
-v2ray_server_ip=$( cat /opt/etc/v2ray.json |grep 'protocol":\s*\"vmess' -A10 |grep '"address"'|cut -d: '-f2'|cut -d'"' -f2)
+v2ray_server_ip=$(cat /opt/etc/v2ray.json |grep 'protocol":\s*\"vmess' -A10 |grep -o '"address": ".*",'|cut -d: '-f2'|cut -d'"' -f2)
+
+if [ -z "$v2ray_server_ip" ]; then
+    echo 'can not find out remote VPS ip/domain in /opt/etc/v2ray.json'
+    exit
+fi
 
 LOCAL_IPS="
 0.0.0.0/8

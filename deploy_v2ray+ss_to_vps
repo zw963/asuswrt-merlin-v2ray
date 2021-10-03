@@ -259,7 +259,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
         {
             "tag":"transparent",
             "protocol": "dokodemo-door",
-            "port": 1081, // 监听
+            "port": 1081, // 透明代理 1081 端口
             "sniffing": {
                 "enabled": true,
                 "destOverride": ["http","tls"]
@@ -282,7 +282,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             // redirect 透明代理必需(不支持tproxy时), 用来接受从 dnsmasq 转发过来的 DNS 流量。
             "tag": "dns-inbound",
             "protocol": "dokodemo-door",
-            "port": 65053, // 监听 DNS
+            "port": 65053, // 当使用 redirect 模式时, 在 65053 端口监听来自于 dnsmasq 的 udp 流量.
             "settings": {
                 // 这里是流量被转发到的地址，端口，可接受的网络协议类型
                 // 注意： 这有别于 dns-outbound 中对应的配置，后者是直接修改 DNS 服务器地址/端口
