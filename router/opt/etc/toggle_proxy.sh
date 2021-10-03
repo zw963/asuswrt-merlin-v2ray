@@ -32,15 +32,18 @@ function enable_proxy () {
         echo "conf-dir=$dnsmasq_dir/,*.conf" >> /etc/dnsmasq.conf
     fi
 
-    echo 'server=/#/127.0.0.1#65053' > $dnsmasq_dir/v2ray.conf
-
-    # 开启日志.
-    # if ! grep -qs "^log-queries$" /etc/dnsmasq.conf; then
-    #     echo 'log-queries' >> $dnsmasq_dir/v2ray.conf
-    #     echo 'log-facility=/var/log/dnsmasq.log' >> $dnsmasq_dir/v2ray.conf
-    # fi
-
-    chmod +x /opt/etc/restart_dnsmasq.sh && /opt/etc/restart_dnsmasq.sh
+    if modprobe xt_TPROXY &>/dev/null; then
+        sed -i 's#"tproxy": ".*"#"tproxy": "tproxy"#' /opt/etc/v2ray.json
+    else
+        echo 'server=/#/127.0.0.1#65053' > $dnsmasq_dir/v2ray.conf
+        # 开启日志.
+        # if ! grep -qs "^log-queries$" /etc/dnsmasq.conf; then
+        #     echo 'log-queries' >> $dnsmasq_dir/v2ray.conf
+        #     echo 'log-facility=/var/log/dnsmasq.log' >> $dnsmasq_dir/v2ray.conf
+        # fi
+        chmod +x /opt/etc/restart_dnsmasq.sh && /opt/etc/restart_dnsmasq.sh
+        sed -i 's#"tproxy": ".*"#"tproxy": "redirect"#' /opt/etc/v2ray.json
+    fi
 
     echo '[0m[0;33m => Proxy is enabled.[0m'
 }
