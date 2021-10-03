@@ -8,11 +8,13 @@ dnsmasq_dir=/opt/etc/dnsmasq.d
 function clean_dnsmasq_config () {
     if [ -d "$dnsmasq_dir" ]; then
         rm -f $dnsmasq_dir/v2ray.conf
+        rmdir $dnsmasq_dir
         chmod +x /opt/etc/restart_dnsmasq.sh && /opt/etc/restart_dnsmasq.sh
     fi
 }
 
 function enable_dnsmasq_config () {
+    echo -n 'Apply redirect mode. '
     mkdir -p "$dnsmasq_dir"
 
     # 为默认的 /etc/dnsmasq.conf 新增配置.
@@ -50,7 +52,6 @@ function enable_proxy () {
     echo '[0m[0;33m => Enabling proxy ...[0m'
 
     chmod +x /opt/etc/apply_iptables_rule.sh && /opt/etc/apply_iptables_rule.sh
-    chmod +x /opt/etc/init.d/S22v2ray && /opt/etc/init.d/S22v2ray start
 
     if [ -e /opt/etc/use_redirect_proxy ]; then
         enable_dnsmasq_config
@@ -61,6 +62,8 @@ function enable_proxy () {
             enable_dnsmasq_config
         fi
     fi
+
+    chmod +x /opt/etc/init.d/S22v2ray && /opt/etc/init.d/S22v2ray start
 
     echo '[0m[0;33m => Proxy is enabled.[0m'
 }
