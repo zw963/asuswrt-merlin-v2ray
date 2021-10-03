@@ -9,10 +9,17 @@ Since 2020-09-19, this project's release version just follow [V2Ray-core](https:
 
 ## Feature
 
-1. transparent proxy(you know reason) for all devices connect to your's WiFi.
+1. transparent proxy(you know reason) for all devices connect to your's LAN.
 2. use your router 1080 port (e.g. router.asus.com:1080) as a socks5/http proxy directly.
 3. Ad block.
 4. All additional benefits come from V2Ray.
+
+For transparent proxy, current two mode is supported, will select automatically when deploy depend on device if support TProxy.
+
+1. tproxy is the default mode for routers which support TProxy.
+2. redirect will be used if router not support TProxy, it require dnsmasq be installed on your's router.
+
+You can always to fallback use redirect mode if create a file `/opt/etc/use_redirect_proxy` in router.
 
 ## Prerequisites
 
