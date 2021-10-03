@@ -1,5 +1,26 @@
 #!/bin/sh
 
+function perl_replace() {
+    local regexp replace file content
+    regexp=$1
+    # 注意 replace 当中的特殊变量, 例如, $& $1 $2 的手动转义.
+    # 写完一定测试一下，perl 变量引用: http://www.perlmonks.org/?node_id=353259
+    replace=$2
+    escaped_replace=$(echo "$replace" |sed 's#"#\\"#g')
+
+    perl -i -ne "s$regexp$replacegs; print \$_; unless ($& eq \"\") {print STDERR \"\`\033[0;33m$&\033[0m' is replace with \`\033[0;33m${escaped_replace}\033[0m'\n\"};" "$3" "$4"
+}
+
+# 为了支持多行匹配，使用 perl 正则, 比 sed 好用一百倍！
+function replace_multiline () {
+    local regexp replace file content
+    regexp=$1
+    replace=$2
+    file=$3
+
+    perl_replace "$regexp" "$replace" -0 "$file"
+}
+
 # disalbe_proxy 并没有停止 v2ray 服务.
 # 因为即使关闭透明代理，仍可以通过浏览器插件使用 v2ray 的 socks 代理或 http 代理服务。
 
@@ -58,6 +79,13 @@ function enable_proxy () {
     else
         if modprobe xt_TPROXY &>/dev/null; then
             sed -i 's#"tproxy": ".*"#"tproxy": "tproxy"#' /opt/etc/v2ray.json
+            if [ -e /opt/etc/use_fakedns ]; then
+                replace_multiline '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["fakedns"]' /opt/etc/v2ray.json
+                replace_multiline '("servers":\s*\[)(\s*)"8.8.4.4",' '$1$2"fakedns",$2"8.8.4.4",' /opt/etc/v2ray.json
+            else
+                replace_multiline '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["http", "tls"]' /opt/etc/v2ray.json
+                replace_multiline '("servers":\s*\[).*?(\s*)"8.8.4.4",' '$1$2"8.8.4.4",' /opt/etc/v2ray.json
+            fi
         else
             enable_dnsmasq_config
         fi
