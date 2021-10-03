@@ -99,10 +99,14 @@ function apply_gateway_rule () {
     iptables -t mangle -A OUTPUT -j V2RAY_MASK # 应用规则
 }
 
-if modprobe xt_TPROXY &>/dev/null; then
-    apply_tproxy_rule
-else
+if [ -e /opt/etc/use_redirect_proxy ]; then
     apply_redirect_rule
+else
+    if modprobe xt_TPROXY &>/dev/null; then
+        apply_tproxy_rule
+    else
+        apply_redirect_rule
+    fi
 fi
 
 echo '[0m[1;32m done.[0m'
