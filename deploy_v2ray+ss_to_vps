@@ -188,6 +188,14 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                 "expectIPs": [
                     "ext:geoip-only-cn-private.dat:cn"
                 ]
+            },
+            {
+                // fakeDNS 必须，否则会被解析为 fake IP.
+                "address": "localhost",
+                "port": 53,
+                "domains": [
+                    "router.asus.com"
+                ]
             }
         ],
         // 默认为 false, 开启后，如果通过默认的 DNS 访问返回结果不匹配 cn site/ip,
@@ -266,7 +274,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                     // 当 Dokodemo-door 中指定了 followRedirect，且 sockopt.tproxy 为空时，
                     // sockopt.tproxy 的值会被设为 "redirect"，因此该设定 redirect 模式非必须的。
                     // 下面的选项会在 patch_router 的时候，自动选择 tproxy/redirect, 并被替换。
-                    "tproxy": "redirect"
+                    "tproxy": "tproxy"
                 }
             }
         },
@@ -281,7 +289,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                 // 因为这里的流量直接来自 dnsmasq, 所以这个 address 必须填, 似乎随便填都可以.
                 "address": "8.8.4.4",
                 "port": 53,
-                "network": "tcp,udp"
+                "network": "udp"
             }
         },
         {
@@ -334,6 +342,9 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                 "sockopt": {
                     "mark": 255
                 }
+            },
+            "mux": {
+                "enabled": true
             }
         },
         {
