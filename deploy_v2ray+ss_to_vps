@@ -199,6 +199,15 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
         "domainMatcher": "mph",
         "rules": [
             {
+                // tproxy 透明代理必需。
+                "type": "field",
+                "inboundTag": ["transparent"],
+                "port": 53,
+                "network": "udp",
+                "outboundTag": "dns-outbound"
+            },
+            {
+                // redirect 透明代理必需。
                 "type": "field",
                 "inboundTag": ["dns-inbound"],
                 "outboundTag": "dns-outbound"
