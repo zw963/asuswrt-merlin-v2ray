@@ -14,12 +14,44 @@ Since 2020-09-19, this project's release version just follow [V2Ray-core](https:
 3. Ad block.
 4. All additional benefits come from V2Ray.
 
-For transparent proxy, current two mode is supported, will select automatically when deploy depend on device if support TProxy.
+For transparent proxy, current three mode is supported, will select automatically depend on your's router device.
 
-1. tproxy is the default mode for routers which support TProxy.
-2. redirect will be used if router not support TProxy, it require dnsmasq be installed on your's router.
+1. tproxy mode will be used if routers support TProxy.
+2. redirect mode will be used if router not support TProxy.
+3. fakedns mode based on tproxy mode, it can only switch on manually.
 
-You can always to fallback use redirect mode if create a file `/opt/etc/use_redirect_proxy` in router.
+*NOTICE* 
+
+redirect mode require dnsmasq serve as LAN DNS server, if you asuswrt merlin, this is default mode.
+others mode V2Ray and basically build tools(For use with QUIC) is the only dependency.
+
+You can always check router if check TProxy use:
+
+```sh
+# modprobe xt_TPROXY
+```
+
+## Switch proxy mode
+
+You can switch modes after deploy successful.
+
+### Switch to use old redirect transparent proxy (need dnsmasq)
+
+```sh
+$: ./use_redirect_proxy admin@192.168.50.1
+```
+
+### Switch to use fakedns based transparent proxy (need TProxy support)
+
+```sh
+$: ./use_fakedns admin@192.168.50.1
+```
+
+### Switch to auto mode (default)
+
+```sh
+$: ./use_auto_proxy admin@192.168.50.1
+```
 
 ## Prerequisites
 

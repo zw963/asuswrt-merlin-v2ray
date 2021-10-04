@@ -1,5 +1,9 @@
 #!/bin/bash
 
-echo Usage: use_fakedns admin@192.168.50.1
+if [ -z "$*" ]; then
+    echo Usage: use_fakedns admin@192.168.50.1
+    exit
+fi
 
-ssh "$*" /opt/etc/patch_router 'touch /opt/etc/use_fakedns'
+ssh "$*" 'rm -f /opt/etc/use_redirect_proxy && touch /opt/etc/use_fakedns'
+ssh "$*" /opt/etc/patch_router
