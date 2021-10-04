@@ -90,14 +90,21 @@ function apply_tproxy_rule () {
 }
 
 function apply_gateway_rule () {
+    # 这个 rule 仅仅在 tproxy 模式下需要, 否则，在路由器中无法访问外网.
+    echo -n ' Apply router rule ...'
+
     iptables -t mangle -N V2RAY_MASK # 代理网关本机
+
     for local_ip in $LOCAL_IPS; do
         iptables -t mangle -A V2RAY_MASK -d $local_ip -j RETURN
     done
 
+    iptables -t mangle -A V2RAY_MASK -d $v2ray_server_ip -j RETURN
+
     iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p tcp -j RETURN
-    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN # 直连局域网，53 端口除外（因为要使用 V2Ray 的 DNS）
-    iptables -t mangle -A V2RAY_MASK -j RETURN -m mark --mark 0xff    # 直连 SO_MARK 为 0xff 的流量(0xff 是 16 进制数，数值上等同与上面V2Ray 配置的 255)，此规则目的是避免代理本机(网关)流量出现回环问题
+    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
+    # 直连 SO_MARK 为 0xff 的流量(0xff 是 16 进制数，数值上等同与上面V2Ray 配置的 255)，此规则目的是避免代理本机(网关)流量出现回环问题
+    iptables -t mangle -A V2RAY_MASK -j RETURN -m mark --mark 0xff
 
     iptables -t mangle -A V2RAY_MASK -p udp -j MARK --set-mark 1   # 给 UDP 打标记,重路由
     iptables -t mangle -A V2RAY_MASK -p tcp -j MARK --set-mark 1   # 给 TCP 打标记，重路由
@@ -109,7 +116,7 @@ if [ -e /opt/etc/use_redirect_proxy ]; then
     apply_redirect_rule
 else
     if modprobe xt_TPROXY &>/dev/null; then
-        apply_tproxy_rule
+        apply_tproxy_rule && apply_gateway_rule
     else
         apply_redirect_rule
     fi
