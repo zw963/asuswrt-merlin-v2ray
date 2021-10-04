@@ -8,7 +8,7 @@ function perl_replace() {
     replace=$2
     escaped_replace=$(echo "$replace" |sed 's#"#\\"#g')
 
-    perl -i -ne "s$regexp$replacegs; print \$_; unless ($& eq \"\") {print STDERR \"\`\033[0;33m$&\033[0m' is replace with \`\033[0;33m${escaped_replace}\033[0m'\n\"};" "$3" "$4"
+    perl -i -ne "s$regexp$replacegs; print \$_; unless ($& eq \"\") {print STDERR \"\`\033[0;33m$&\033[0m' was replaced with \`\033[0;33m${escaped_replace}\033[0m'\n\"};" "$3" "$4"
 }
 
 # 为了支持多行匹配，使用 perl 正则, 比 sed 好用一百倍！
@@ -35,7 +35,12 @@ function clean_dnsmasq_config () {
 }
 
 function enable_dnsmasq_config () {
-    echo -n 'Apply redirect mode. '
+    if ! which dnsmasq &>/dev/null; then
+        echo -e "[0m[1;31mERROR:[0m Transparent proxy based on redirect mode need dnsmasq to serve as LAN DNS server!"
+        exit 1
+    fi
+
+    echo -n 'Apply dnsmasq config ... '
     mkdir -p "$dnsmasq_dir"
 
     # 为默认的 /etc/dnsmasq.conf 新增配置.
@@ -61,8 +66,8 @@ function enable_dnsmasq_config () {
 function disable_proxy () {
     echo '[0m[0;33m => Disabling proxy ...[0m'
 
-    /opt/etc/clean_iptables_rule.sh && chmod -x /opt/etc/apply_iptables_rule.sh
     chmod -x /opt/etc/init.d/S22v2ray && sh /opt/etc/init.d/S22v2ray stop
+    /opt/etc/clean_iptables_rule.sh && chmod -x /opt/etc/apply_iptables_rule.sh
 
     clean_dnsmasq_config
 
@@ -72,25 +77,31 @@ function disable_proxy () {
 function enable_proxy () {
     echo '[0m[0;33m => Enabling proxy ...[0m'
 
-    chmod +x /opt/etc/apply_iptables_rule.sh && /opt/etc/apply_iptables_rule.sh
-
     if [ -e /opt/etc/use_redirect_proxy ]; then
         enable_dnsmasq_config
     else
         if modprobe xt_TPROXY &>/dev/null; then
             sed -i 's#"tproxy": ".*"#"tproxy": "tproxy"#' /opt/etc/v2ray.json
             if [ -e /opt/etc/use_fakedns ]; then
+                echo 'Apply fakeDNS config ...'
                 replace_multiline '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["fakedns"]' /opt/etc/v2ray.json
                 replace_multiline '("servers":\s*\[)(\s*)"8.8.4.4",' '$1$2"fakedns",$2"8.8.4.4",' /opt/etc/v2ray.json
             else
+                echo 'Apply TProxy config ...'
                 replace_multiline '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["http", "tls"]' /opt/etc/v2ray.json
                 replace_multiline '("servers":\s*\[).*?(\s*)"8.8.4.4",' '$1$2"8.8.4.4",' /opt/etc/v2ray.json
             fi
         else
-            enable_dnsmasq_config
+            if [ -e /opt/etc/use_fakedns ]; then
+                echo -e "[0m[1;31mERROR:[0m Enable fakeDNS need router support TProxy!"
+                exit 1
+            else
+                enable_dnsmasq_config
+            fi
         fi
     fi
 
+    chmod +x /opt/etc/apply_iptables_rule.sh && /opt/etc/apply_iptables_rule.sh
     chmod +x /opt/etc/init.d/S22v2ray && /opt/etc/init.d/S22v2ray start
 
     echo '[0m[0;33m => Proxy is enabled.[0m'

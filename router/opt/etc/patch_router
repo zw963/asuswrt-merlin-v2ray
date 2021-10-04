@@ -6,6 +6,4 @@ echo '2500000' > /proc/sys/net/core/rmem_max
 
 /opt/etc/toggle_proxy.sh disable
 echo '--------------'
-/opt/etc/toggle_proxy.sh enable
-
-date "+%Y%m%d_%H:%M:%S" > /tmp/patch_router_was_run_at
+/opt/etc/toggle_proxy.sh enable && date "+%Y%m%d_%H:%M:%S" > /tmp/patch_router_was_run_at

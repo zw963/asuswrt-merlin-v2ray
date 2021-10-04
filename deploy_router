@@ -134,6 +134,5 @@ add_service wan-start 'cru a update_geosites "25 5 * * 0 /opt/etc/update_geosite
 add_service dhcpc-event '/opt/etc/apply_iptables_rule.sh'
 
 add_service services-start '[ -f /tmp/patch_router_was_run_at ] || /opt/etc/patch_router'
-/opt/etc/patch_router
 
-echo "Congratulations, [0m[33mDeploy succssful[0m!"
+/opt/etc/patch_router && echo "Congratulations, [0m[33mDeploy succssful[0m!"
