@@ -85,7 +85,7 @@ function enable_proxy () {
             if [ -e /opt/etc/use_fakedns ]; then
                 echo 'Apply fakeDNS config ...'
                 replace_multiline '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["fakedns"]' /opt/etc/v2ray.json
-                replace_multiline '("servers":\s*\[)(\s*)"8.8.4.4",' '$1$2"fakedns",$2"8.8.4.4",' /opt/etc/v2ray.json
+                replace_multiline '("servers":\s*\[)(.*?)(\s*)"8.8.4.4",' '$1$3"fakedns",$2$3"8.8.4.4",' /opt/etc/v2ray.json
             else
                 echo 'Apply TProxy config ...'
                 replace_multiline '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["http", "tls"]' /opt/etc/v2ray.json
