@@ -33,15 +33,13 @@ if [ -z "$v2ray_server_ip" ]; then
     exit
 fi
 
+# 这里的 IP 不要随便改动或减少，尤其不要随便改动 127.0.0.1/8 为 127.0.0.1/32, 可能引起回环！
 LOCAL_IPS="
 0.0.0.0/8
 10.0.0.0/8
 127.0.0.0/8
-169.254.0.0/16
-172.16.0.0/12
-224.0.0.0/4
-240.0.0.0/4
-255.255.255.255/32
+255.255.255.255
+$v2ray_server_ip
 "
 
 function apply_redirect_rule () {
@@ -51,7 +49,6 @@ function apply_redirect_rule () {
         iptables -t nat -A V2RAY_TCP -d $local_ip -j RETURN
     done
     iptables -t nat -A V2RAY_TCP -d 192.168.0.0/16 -j RETURN
-    iptables -t nat -A V2RAY_TCP -d $v2ray_server_ip -j RETURN
     # 如果是 V2Ray 标记过、并再次发出的流量(通过 streamSettings.sockopt.mark: 255 设置),
     # 全部走直连，不这样做就成了死循环了。
     iptables -t nat -A V2RAY_TCP -p tcp -j RETURN -m mark --mark 0xff
@@ -78,8 +75,6 @@ function apply_tproxy_rule () {
         iptables -t mangle -A V2RAY_UDP -d $local_ip -j RETURN
     done
 
-    iptables -t mangle -A V2RAY_UDP -d $v2ray_server_ip -j RETURN
-
     iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p tcp -j RETURN
     # 本地局域网内，除了发至 53 端口的流量(会被 tproxy 标记)，其余全部直连.
     iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
@@ -95,14 +90,9 @@ function apply_gateway_rule () {
 
     iptables -t mangle -N V2RAY_MASK # 代理网关本机
 
-    for local_ip in $LOCAL_IPS; do
-        iptables -t mangle -A V2RAY_MASK -d $local_ip -j RETURN
-    done
+    # 192.168.0.0/16 必须全部返回，否则会造成 V2ray 中 DNS 策略中使用 localhost 时，形成死循环。
+    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -j RETURN
 
-    iptables -t mangle -A V2RAY_MASK -d $v2ray_server_ip -j RETURN
-
-    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p tcp -j RETURN
-    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
     # 直连 SO_MARK 为 0xff 的流量(0xff 是 16 进制数，数值上等同与上面V2Ray 配置的 255)，此规则目的是避免代理本机(网关)流量出现回环问题
     iptables -t mangle -A V2RAY_MASK -j RETURN -m mark --mark 0xff
 
@@ -116,7 +106,10 @@ if [ -e /opt/etc/use_redirect_proxy ]; then
     apply_redirect_rule
 else
     if modprobe xt_TPROXY &>/dev/null; then
-        apply_tproxy_rule && apply_gateway_rule
+        apply_tproxy_rule
+        # 下面的 rule 使得路由器内访问 google 可以工作。
+        # 似乎在 fakedns 模式下不工作。
+        apply_gateway_rule
     else
         apply_redirect_rule
     fi

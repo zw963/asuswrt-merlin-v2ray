@@ -257,7 +257,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
     },
     "inbounds": [
         {
-            "tag":"transparent",
+            "tag": "transparent",
             "protocol": "dokodemo-door",
             "port": 1081, // 透明代理 1081 端口
             "sniffing": {
@@ -274,7 +274,8 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                     // 当 Dokodemo-door 中指定了 followRedirect，且 sockopt.tproxy 为空时，
                     // sockopt.tproxy 的值会被设为 "redirect"，因此该设定 redirect 模式非必须的。
                     // 下面的选项会在 patch_router 的时候，自动选择 tproxy/redirect, 并被替换。
-                    "tproxy": "tproxy"
+                    "tproxy": "tproxy",
+                     "mark":255
                 }
             }
         },
