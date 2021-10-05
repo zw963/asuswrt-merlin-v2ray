@@ -29,7 +29,6 @@ dnsmasq_dir=/opt/etc/dnsmasq.d
 function clean_dnsmasq_config () {
     if [ -d "$dnsmasq_dir" ]; then
         rm -f $dnsmasq_dir/v2ray.conf
-        rmdir $dnsmasq_dir
         chmod +x /opt/etc/restart_dnsmasq.sh && /opt/etc/restart_dnsmasq.sh
     fi
 }
@@ -54,7 +53,7 @@ function enable_dnsmasq_config () {
         # 开启日志.
         if ! grep -qs "^log-queries$" /etc/dnsmasq.conf; then
             echo 'log-queries' >> $dnsmasq_dir/v2ray.conf
-            echo 'log-facility=/var/log/dnsmasq.log' >> $dnsmasq_dir/v2ray.conf
+            echo 'log-facility=/tmp/dnsmasq.log' >> $dnsmasq_dir/v2ray.conf
         fi
     fi
 
