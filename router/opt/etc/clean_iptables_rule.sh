@@ -16,11 +16,11 @@ done
 iptables -t mangle -F V2RAY_UDP 2>/dev/null          # flush
 iptables -t mangle -X V2RAY_UDP 2>/dev/null          # --delete-chain
 
-while iptables -t mangle -C PREROUTING -j V2RAY_MARK 2>/dev/null; do
-    iptables -t mangle -D PREROUTING -j V2RAY_MARK
+while iptables -t mangle -C OUTPUT -j V2RAY_MASK 2>/dev/null; do
+    iptables -t mangle -D OUTPUT -j V2RAY_MASK
 done
-iptables -t mangle -F V2RAY_MARK 2>/dev/null          # flush
-iptables -t mangle -X V2RAY_MARK 2>/dev/null          # --delete-chain
+iptables -t mangle -F V2RAY_MASK 2>/dev/null          # flush
+iptables -t mangle -X V2RAY_MASK 2>/dev/null          # --delete-chain
 
 ip route del local default dev lo table 100 2>/dev/null
 ip rule del fwmark 1 table 100 2>/dev/null
