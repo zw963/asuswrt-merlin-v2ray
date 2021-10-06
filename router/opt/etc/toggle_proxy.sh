@@ -1,7 +1,7 @@
 #!/bin/sh
 
 function perl_replace() {
-    local regexp replace file content
+    local regexp replace
     regexp=$1
     # 注意 replace 当中的特殊变量, 例如, $& $1 $2 的手动转义.
     # 写完一定测试一下，perl 变量引用: http://www.perlmonks.org/?node_id=353259
@@ -13,7 +13,7 @@ function perl_replace() {
 
 # 为了支持多行匹配，使用 perl 正则, 比 sed 好用一百倍！
 function replace_multiline () {
-    local regexp replace file content
+    local regexp replace file
     regexp=$1
     replace=$2
     file=$3
