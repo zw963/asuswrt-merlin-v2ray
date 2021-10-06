@@ -19,6 +19,7 @@ copy router/opt/etc/enable_swap.sh /opt/etc
 copy router/opt/etc/patch_router /opt/etc
 copy router/opt/etc/restart_dnsmasq.sh /opt/etc
 copy router/opt/etc/update_geosite.sh /opt/etc
+copy router/opt/etc/update_big_geosite.sh /opt/etc
 
 if [ -d predownloaded_binary ] && zip_file=$(ls -1 predownloaded_binary/v2ray-linux-arm*.zip |head -n1); then
     echo 'Copy predownloaded binary to router ...'
