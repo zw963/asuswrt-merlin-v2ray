@@ -1,0 +1,23 @@
+#!/usr/bin/env ruby
+# -*- coding: utf-8; mode: enh-ruby; -*-
+
+times = ARGV[1] || 10000
+sleep = ARGV[2] || 3
+
+thread1 = Thread.new do
+  times.times do |i|
+    system("curl -so /dev/null -w 'mirrors.163.com: %{http_code}\n' mirrors.163.com")
+    sleep sleep
+  end
+
+end
+
+thread2 = Thread.new do
+  times.times do
+    system("curl -so /dev/null -w 'Google: %{http_code}\n' google.com")
+    sleep sleep
+  end
+end
+
+thread1.join
+thread2.join
