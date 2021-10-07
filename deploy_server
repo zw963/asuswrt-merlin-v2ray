@@ -9,7 +9,7 @@ function postinstall () {
     echo
     echo 'Please wait copy generated client v2ray.json into local machine ...'
     scp $target:/etc/v2ray/v2ray.json ./router/opt/etc/
-    echo "Run [0m[33m./deploy_v2ray_to_router admin@192.168.50.1[0m to deploy to router."
+    echo "Run [0m[33m./deploy_router admin@192.168.50.1[0m to deploy to router."
 }
 
 if grep -qs -e 'change_yours_password_here' server.json; then
@@ -35,6 +35,7 @@ set -eu
 
 [ -f /etc/systemd/system/v2ray.service ] && systemctl stop v2ray
 
+# 为了让 QUIC 协议可以工作，这个必须。
 package compile-tools
 
 v2ray_version=4.42.2
@@ -52,6 +53,14 @@ fi
 cp v2ray v2ctl *.dat /usr/local/bin &&
     cp systemd/system/*.service /etc/systemd/system
 
+replace_regex 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
+# Added by user
+LimitNPROC=500
+LimitNOFILE=1000000' /etc/systemd/system/v2ray.service
+replace_regex 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
+# Added by user
+LimitNPROC=500
+LimitNOFILE=1000000' /etc/systemd/system/v2ray@.service
 replace_regex '/usr/local/etc/v2ray/config.json' '/etc/v2ray/config.json' /etc/systemd/system/v2ray.service
 replace_regex '/usr/local/etc/v2ray/%i.json' '/etc/v2ray/%i.json' /etc/systemd/system/v2ray@.service
 
@@ -222,6 +231,11 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
             },
             {
                 "type": "field",
+                "ip": ["8.8.4.4"],
+                "outboundTag": "proxy"
+            },
+            {
+                "type": "field",
                 "ip": [
                     "ext:geoip-only-cn-private.dat:cn",
                     "ext:geoip-only-cn-private.dat:private"
@@ -275,7 +289,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                     // sockopt.tproxy 的值会被设为 "redirect"，因此该设定 redirect 模式非必须的。
                     // 下面的选项会在 patch_router 的时候，自动选择 tproxy/redirect, 并被替换。
                     "tproxy": "tproxy",
-                     "mark":255
+                    "mark": 255
                 }
             }
         },
@@ -359,6 +373,11 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                         "port": $ss_port
                     }
                 ]
+            },
+            "streamSettings": {
+                "sockopt": {
+                    "mark": 255
+                }
             }
         },
         {
