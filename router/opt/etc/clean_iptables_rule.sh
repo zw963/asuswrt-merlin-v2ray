@@ -22,6 +22,12 @@ done
 iptables -t mangle -F V2RAY_MASK 2>/dev/null          # flush
 iptables -t mangle -X V2RAY_MASK 2>/dev/null          # --delete-chain
 
+while iptables -t mangle -C PREROUTING -p tcp -m socket -j DIVERT 2>/dev/null; do
+    iptables -t mangle -D PREROUTING -p tcp -m socket -j DIVERT
+done
+iptables -t mangle -F DIVERT 2>/dev/null          # flush
+iptables -t mangle -X DIVERT 2>/dev/null          # --delete-chain
+
 ip route del local default dev lo table 100 2>/dev/null
 ip rule del fwmark 1 table 100 2>/dev/null
 

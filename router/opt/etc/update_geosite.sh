@@ -9,7 +9,11 @@ curl -L https://github.com/v2fly/domain-list-community/releases/download/$tag/dl
 if [ $? == 0 ]; then
     cd /opt/sbin
 
-    /opt/etc/init.d/S22v2ray stop
+    if [ -e /opt/etc/init.d/S22v2ray ]; then
+        /opt/etc/init.d/S22v2ray stop
+    else
+        systemctl stop v2ray
+    fi
 
     rm -f geosite.dat.old
     cp geosite.dat geosite.dat.old
@@ -18,7 +22,11 @@ if [ $? == 0 ]; then
          cp geosite.dat.new geosite.dat
     fi
 
-    /opt/etc/init.d/S22v2ray restart
+    if [ -e /opt/etc/init.d/S22v2ray ]; then
+        /opt/etc/init.d/S22v2ray start
+    else
+        systemctl start v2ray
+    fi
 else
     echo 'download failed.'
 fi

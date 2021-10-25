@@ -62,7 +62,11 @@ function enable_dnsmasq_config () {
 function disable_proxy () {
     echo '[0m[0;33m => Disabling proxy ...[0m'
 
-    chmod -x /opt/etc/init.d/S22v2ray && sh /opt/etc/init.d/S22v2ray stop
+    if [ -e /opt/etc/init.d/S22v2ray ]; then
+        chmod -x /opt/etc/init.d/S22v2ray && sh /opt/etc/init.d/S22v2ray stop
+    else
+        systemctl disable v2ray && systemctl stop v2ray
+    fi
     /opt/etc/clean_iptables_rule.sh && chmod -x /opt/etc/apply_iptables_rule.sh
 
     if which dnsmasq &>/dev/null; then
@@ -101,7 +105,12 @@ function enable_proxy () {
     fi
 
     chmod +x /opt/etc/apply_iptables_rule.sh && /opt/etc/apply_iptables_rule.sh
-    chmod +x /opt/etc/init.d/S22v2ray && /opt/etc/init.d/S22v2ray start
+
+    if [ -e /opt/etc/init.d/S22v2ray ]; then
+        chmod +x /opt/etc/init.d/S22v2ray && /opt/etc/init.d/S22v2ray start
+    else
+        systemctl start v2ray && systemctl enable v2ray
+    fi
 
     if which dnsmasq &>/dev/null; then
         chmod +x /opt/etc/restart_dnsmasq.sh && /opt/etc/restart_dnsmasq.sh
