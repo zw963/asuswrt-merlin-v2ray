@@ -1,0 +1,169 @@
+#!/bin/bash
+
+self="$(cat deploy_start.sh)" && eval "$self"
+
+export target=$1
+
+config=./router/opt/etc/v2ray.json
+
+if [ ! -e "$config" ];then
+    echo "Please create ${config} or generate it use deploy_v2ray+ss_to_vps before deploy to router."
+    exit
+fi
+
+ssh "$*" "sudo mkdir -p /opt/etc /opt/sbin /var/log/v2ray"
+copy "$config" /opt/etc/
+copy router/opt/etc/apply_iptables_rule.sh /opt/etc/
+copy router/opt/etc/clean_iptables_rule.sh /opt/etc
+copy router/opt/etc/update_geosite.sh /opt/etc
+copy router/opt/etc/update_big_geosite.sh /opt/etc
+copy router/opt/etc/toggle_proxy.sh /opt/etc
+copy router/opt/etc/patch_router /opt/etc
+copy router/opt/etc/iptables-rule.service /etc/systemd/system
+copy router/opt/etc/check_google_use_proxy /opt/etc
+copy router/opt/etc/check_google_use_socks5 /opt/etc
+
+if [ -d predownloaded_binary ] && zip_file=$(ls -1 predownloaded_binary/v2ray-linux-*.zip |head -n1); then
+    echo 'Copy predownloaded binary to router ...'
+    copy $zip_file $zip_file
+else
+    ssh "$*" "rm -rf predownloaded_binary"
+    echo 'Please download predownloaded binary into predownloaded_binary folder.'
+    exit 1
+fi
+
+deploy_start
+
+set -eu
+
+# --------------------------------------------------------------------------------
+#
+# Following script will be run on router, please change it to meet your's need.
+#
+# -------------------------------------------------------------------------------
+
+#
+# 如果第一次运行本脚本, 请务必注意以下几点：
+
+# 1. 软路由设定使用固定 IP,
+# 2. 软路由将 gateway 以及 dns1 指定到你的主路由(WiFi 路由器) IP.
+# 3. 以上设定完后，在主路由通过(路由器的) web 界面，将网关(gateway)以及第一个 dns(dns1)
+#    软路由 IP 地址.
+
+# 以 centos 7 为例，需要针对 /etc/sysconfig/network-scripts/ifcfg-enp0s25
+# 做如下更改：(enp0s25 为网卡 interface)
+# - 修改 BOOTPROTO=none
+# - 设定 IPADDR=192.168.50.111 (同网段任意固定 IP)
+# - 设定 GATEWAY=192.168.50.1 (主路由器 IP)
+# - 设定 DNS1=192.168.50.1 (主路由 IP)
+# - 设定 PREFIX=24 (用来初始化 netmask 等)
+# - for centos 7, systemctl restart network OR
+#    for centos 8, nmcli connection down enp0s25 && sudo nmcli connection up enp0s25
+# - 关闭 firewalld, 因为它可能会造成 iptables-rule.service 在启动时失败。
+
+# 最后，可选的，打开 /etc/systemd/logind.conf, 修改为如下设置，来避免关闭盖子待机。
+# [Login]
+# HandleLidSwitch=ignore
+# HandleLidSwitchDocked=ignore
+
+# 还需要阻止自动 suspend, 以及 hibernate.(取消使用 unmask 替换 mask)
+# $ systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
+
+cd predownloaded_binary && unzip -o v2ray-linux-64.zip && chmod +x v2ctl v2ray
+
+if ./v2ray -version; then
+    set +e; systemctl stop v2ray; set -e
+    cp v2ray v2ctl geosite.dat geoip-only-cn-private.dat /opt/sbin/
+    cp systemd/system/v2ray.service /etc/systemd/system/v2ray.service
+    replace_regex 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
+# Added by user
+LimitNPROC=500
+LimitNOFILE=1000000' /etc/systemd/system/v2ray.service
+    replace_string '/usr/local/bin/v2ray -config /usr/local/etc/v2ray/config.json' '/opt/sbin/v2ray -config /opt/etc/v2ray.json' /etc/systemd/system/v2ray.service
+    # systemctl daemon-reload && systemctl start v2ray
+else
+    echo 'Not valid v2ray version is supported by current router, please download correct version.'
+    exit
+fi
+
+echo 'v2ray is installed'
+
+# ----------------------------------------------------
+#
+# 下面执行一些脚本检查与替换。
+#
+# ---------------------------------------------------
+
+cd /opt/etc
+chmod +x apply_iptables_rule.sh \
+      clean_iptables_rule.sh \
+      update_geosite.sh \
+      update_big_geosite.sh \
+      toggle_proxy.sh \
+      patch_router \
+      check_google_use_proxy \
+      check_google_use_socks5
+
+# 旁路由直接在 53 端口监听
+replace_string '65053' '53' /opt/etc/v2ray.json
+
+# 下面的 iptables 在旁路由模式下，无需设置。
+replace_string 'iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN' 'iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp -j RETURN' /opt/etc/apply_iptables_rule.sh
+replace_string 'iptables -t mangle -A V2RAY_UDP -p udp -j TPROXY --tproxy-mark 1 --on-port $local_v2ray_port' '' /opt/etc/apply_iptables_rule.sh
+
+/opt/etc/clean_iptables_rule.sh && chmod -x /opt/etc/apply_iptables_rule.sh
+chmod +x /opt/etc/apply_iptables_rule.sh && /opt/etc/apply_iptables_rule.sh
+
+# ----------------------------------------------------
+#
+# 启动所需的脚本
+#
+# ---------------------------------------------------
+
+set +e
+systemctl disable firewalld &>/dev/null
+systemctl stop firewalld &>/dev/null
+set -e
+systemctl daemon-reload && systemctl start v2ray && systemctl enable v2ray && systemctl status v2ray
+systemctl start iptables-rule &&  systemctl enable iptables-rule
+cp /opt/etc/update_geosite.sh /etc/cron.weekly/
+
+cat <<'HEREDOC' >> /etc/sysctl.conf
+fs.file-max=51200
+
+net.core.rmem_max=67108864
+net.core.wmem_max=67108864
+net.core.netdev_max_backlog=250000
+net.core.somaxconn=4096
+
+net.ipv4.ip_forward=1
+net.ipv4.tcp_syncookies=1
+net.ipv4.tcp_tw_reuse=1
+net.ipv4.tcp_fin_timeout=30
+net.ipv4.tcp_keepalive_time=1200
+net.ipv4.ip_local_port_range=10000 65000
+net.ipv4.tcp_max_syn_backlog=8192
+net.ipv4.tcp_max_tw_buckets=5000
+net.ipv4.tcp_mem=25600 51200 102400
+net.ipv4.tcp_rmem=4096 87380 67108864
+net.ipv4.tcp_wmem=4096 65536 67108864
+net.ipv4.tcp_mtu_probing=1
+
+# 开启内核 fastopen, Linux 3.7 以上支持, 3.13 才默认开启.
+# 等价于 echo 3 > /proc/sys/net/ipv4/tcp_fastopen
+net.ipv4.tcp_fastopen=3
+HEREDOC
+
+if kernel_version_greater_than 4.9; then
+    modprobe tcp_bbr && lsmod | grep bbr
+    echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
+    echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
+fi
+
+sysctl -p > /dev/null
+
+# test bbr is enabled
+sysctl net.ipv4.tcp_available_congestion_control |grep bbr
+sysctl -n net.ipv4.tcp_congestion_control |grep bbr
+
+echo "Congratulations, [0m[33mDeploy succssful[0m!"

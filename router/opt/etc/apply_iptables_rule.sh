@@ -93,7 +93,7 @@ function apply_tproxy_rule () {
     ip route add local default dev lo table 100
 
     # step 3: 这个不会解释，反正知道和上面的 ip rule/route 一起，可以针对 tcp/udp 实现类似于 redirect 的功能。
-    # 同时需要在 V2Ray 的入栈的地方加
+    # 同时需要在 V2Ray 的入站的地方加
     # "streamSettings": {
     #     "sockopt": {
     #         "tproxy": "tproxy"
