@@ -14,12 +14,14 @@ fi
 copy "$config" /opt/etc/
 copy router/opt/etc/apply_iptables_rule.sh /opt/etc/
 copy router/opt/etc/clean_iptables_rule.sh /opt/etc
-copy router/opt/etc/toggle_proxy.sh /opt/etc
 copy router/opt/etc/enable_swap.sh /opt/etc
-copy router/opt/etc/patch_router /opt/etc
-copy router/opt/etc/restart_dnsmasq.sh /opt/etc
 copy router/opt/etc/update_geosite.sh /opt/etc
 copy router/opt/etc/update_big_geosite.sh /opt/etc
+copy router/opt/etc/restart_dnsmasq.sh /opt/etc
+copy router/opt/etc/toggle_proxy.sh /opt/etc
+copy router/opt/etc/patch_router /opt/etc
+copy router/opt/etc/check_google_use_proxy /opt/etc
+copy router/opt/etc/check_google_use_socks5 /opt/etc
 
 if [ -d predownloaded_binary ] && zip_file=$(ls -1 predownloaded_binary/v2ray-linux-arm*.zip |head -n1); then
     echo 'Copy predownloaded binary to router ...'
@@ -109,11 +111,15 @@ echo 'v2ray was installed.'
 cd /opt/etc
 chmod +x apply_iptables_rule.sh \
       clean_iptables_rule.sh \
-      toggle_proxy.sh \
       enable_swap.sh \
-      patch_router \
       update_geosite.sh \
-      /jffs/scripts/services-start
+      update_big_geosite.sh \
+      restart_dnsmasq.sh \
+      toggle_proxy.sh \
+      patch_router \
+      /jffs/scripts/services-start \
+      check_google_use_proxy \
+      check_google_use_socks5
 
 # ----------------------------------------------------
 #

@@ -2,7 +2,9 @@
 
 # [ -t 1 ] || sleep 10
 
-echo '2500000' > /proc/sys/net/core/rmem_max
+if ! which sysctl &>/dev/null; then
+    echo '2500000' > /proc/sys/net/core/rmem_max
+fi
 
 /opt/etc/toggle_proxy.sh disable
 echo '--------------'
