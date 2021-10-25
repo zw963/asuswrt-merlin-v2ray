@@ -1,0 +1,13 @@
+[Unit]
+Description=Iptables rule
+After=network.target
+Wants=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# 注意分号前后要有空格
+ExecStart=/opt/etc/apply_iptables_rule.sh
+
+[Install]
+WantedBy=multi-user.target
