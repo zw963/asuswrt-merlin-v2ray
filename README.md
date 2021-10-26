@@ -259,10 +259,15 @@ A success deploy on router should be looking like this.
 You can run following command on router
 
 `/opt/etc/toggle_proxy.sh` is used for disable/enable proxy temporary, for disable completely, you need `chmod -x /opt/etc/patch_router`
+
 `/opt/etc/patch_router` basically, just disable proxy, and then enable it.
+
 `/opt/etc/update_geosite.sh` or `/opt/etc/update_big_geosite.sh` is used for update geosite data.
+
 `/opt/etc/enable_swap.sh` is used for enable swap for insufficient RAM device.(if not use amtm enable it already.)
+
 `/opt/etc/apply_iptables_rule.sh` `/opt/etc/clean_iptables_rule.sh` for enable/clean iptables rule.
+
 `/opt/etc/restart_dnsmasq.sh` for restart dnsmasq.
 
 ## Contributing
