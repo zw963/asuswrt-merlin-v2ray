@@ -36,9 +36,9 @@ set -eu
 [ -f /etc/systemd/system/v2ray.service ] && systemctl stop v2ray
 
 # 为了让 QUIC 协议可以工作，这个必须。
-package compile-tools
+# package compile-tools
 
-v2ray_version=4.42.2
+v2ray_version=4.43.0
 arch=linux-64
 
 mkdir -p /usr/bin/v2ray
