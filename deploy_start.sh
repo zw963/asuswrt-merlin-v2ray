@@ -400,21 +400,12 @@ function replace_multiline () {
     perl_replace "$regexp" "$replace" -0 "$file"
 }
 
-function replace () {
-    local regexp replace file content
-    regexp=$1
-    replace=$2
-    file=$3
-
-    perl_replace "$regexp" "$replace" "$file"
-}
-
 function replace_regex () {
     local regexp="$1"
     local replace="$2"
     local file=$3
 
-    replace_multiline "$regexp" "$replace" "$file"
+    perl_replace "$regexp" "$replace" -0 "$file"
 }
 
 function replace_string () {
@@ -423,7 +414,7 @@ function replace_string () {
     local replace="$2"
     local file=$3
 
-    replace_multiline "$regexp" "$replace" "$file"
+    perl_replace "$regexp" "$replace" -0 "$file"
 }
 
 function update_config () {

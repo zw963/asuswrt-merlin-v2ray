@@ -36,6 +36,7 @@ function replace_multiline () {
 # 因为即使关闭透明代理，仍可以通过浏览器插件使用 v2ray 的 socks 代理或 http 代理服务。
 
 dnsmasq_dir=/opt/etc/dnsmasq.d
+v2ray_config=/opt/etc/v2ray.json
 
 function clean_dnsmasq_config () {
     if [ -d "$dnsmasq_dir" ]; then
@@ -67,7 +68,7 @@ function enable_dnsmasq_config () {
         fi
     fi
 
-    sed -i 's#"tproxy": ".*"#"tproxy": "redirect"#' /opt/etc/v2ray.json
+    sed -i 's#"tproxy": ".*"#"tproxy": "redirect"#' $v2ray_config
 }
 
 function disable_proxy () {
@@ -95,17 +96,17 @@ function enable_proxy () {
         enable_dnsmasq_config
     else
         if modprobe xt_TPROXY &>/dev/null; then
-            sed -i 's#"tproxy": ".*"#"tproxy": "tproxy"#' /opt/etc/v2ray.json
+            sed -i 's#"tproxy": ".*"#"tproxy": "tproxy"#' $v2ray_config
             if [ -e /opt/etc/use_fakedns ]; then
                 echo 'Apply fakeDNS config ...'
-                replace_multiline '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["fakedns"]' /opt/etc/v2ray.json
-                if ! match_multiline '"servers":\s*\[.*?"fakedns",.*?"8.8.4.4",' "$(cat /opt/etc/v2ray.json)"; then
-                    replace_multiline '("servers":\s*\[)(.*?)(\s*)"8.8.4.4",' '$1$3"fakedns",$2$3"8.8.4.4",' /opt/etc/v2ray.json
+                replace_multiline '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["fakedns"]' $v2ray_config
+                if ! match_multiline '"servers":\s*\[.*?"fakedns",.*?"8.8.4.4",' "$(cat $v2ray_config)"; then
+                    replace_multiline '("servers":\s*\[)(.*?)(\s*)"8.8.4.4",' '$1$3"fakedns",$2$3"8.8.4.4",' $v2ray_config
                 fi
             else
                 echo 'Apply TProxy config ...'
-                replace_multiline '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["http", "tls"]' /opt/etc/v2ray.json
-                replace_multiline '("servers":\s*\[).*?(\s*)"8.8.4.4",' '$1$2"8.8.4.4",' /opt/etc/v2ray.json
+                replace_multiline '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["http", "tls"]' $v2ray_config
+                replace_multiline '("servers":\s*\[).*?(\s*)"8.8.4.4",' '$1$2"8.8.4.4",' $v2ray_config
             fi
         else
             if [ -e /opt/etc/use_fakedns ]; then
@@ -115,6 +116,10 @@ function enable_proxy () {
                 enable_dnsmasq_config
             fi
         fi
+    fi
+
+    if grep '"loglevel":\s*"debug"' $v2ray_config; then
+        replace_multiline '"loglevel":\s*"debug"' '"loglevel": "warning"' $v2ray_config
     fi
 
     chmod +x /opt/etc/apply_iptables_rule.sh && /opt/etc/apply_iptables_rule.sh

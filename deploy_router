@@ -20,8 +20,9 @@ copy router/opt/etc/update_big_geosite.sh /opt/etc
 copy router/opt/etc/restart_dnsmasq.sh /opt/etc
 copy router/opt/etc/toggle_proxy.sh /opt/etc
 copy router/opt/etc/patch_router /opt/etc
-copy router/opt/etc/check_google_use_proxy /opt/etc
-copy router/opt/etc/check_google_use_socks5 /opt/etc
+copy router/opt/etc/check_google_use_proxy.sh /opt/etc
+copy router/opt/etc/check_google_use_socks5.sh /opt/etc
+copy router/opt/etc/debug_v2ray.sh /opt/etc
 
 if [ -d predownloaded_binary ] && zip_file=$(ls -1 predownloaded_binary/v2ray-linux-arm*.zip |head -n1); then
     echo 'Copy predownloaded binary to router ...'
@@ -118,8 +119,9 @@ chmod +x apply_iptables_rule.sh \
       toggle_proxy.sh \
       patch_router \
       /jffs/scripts/services-start \
-      check_google_use_proxy \
-      check_google_use_socks5
+      check_google_use_proxy.sh \
+      check_google_use_socks5.sh \
+      debug_v2ray.sh
 
 # ----------------------------------------------------
 #
