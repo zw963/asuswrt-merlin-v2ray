@@ -109,7 +109,7 @@ replace_string '65053' '53' /opt/etc/v2ray.json
 
 # 下面的 iptables 在旁路由模式下，无需设置。
 replace_string 'iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN' 'iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp -j RETURN' /opt/etc/apply_iptables_rule.sh
-replace_string 'iptables -t mangle -A V2RAY_UDP -p udp -j TPROXY --tproxy-mark 1 --on-port $local_v2ray_port' '' /opt/etc/apply_iptables_rule.sh
+replace_regex 'iptables -t mangle -A V2RAY_UDP -p udp -j TPROXY --tproxy-mark 1 --on-port \$local_v2ray_port' '' /opt/etc/apply_iptables_rule.sh
 
 /opt/etc/clean_iptables_rule.sh && chmod -x /opt/etc/apply_iptables_rule.sh
 chmod +x /opt/etc/apply_iptables_rule.sh && /opt/etc/apply_iptables_rule.sh
