@@ -369,16 +369,14 @@ function replace_escape1() {
 
 
 function match_multiline() {
-    local regex content
-    # 将 regexp 的换行符 换为一个不可见字符.
-    # 注意: 这里 $1 已经是一个 regex
-    regex=$(echo "$1" |tr '\n' '\a')
+    escaped_regex=$(echo "$1" |sed 's#/#\\\/#g')
+    result=$(echo "$2" |perl -0777 -ne "print if /${escaped_regex}/s")
 
-    # 文本内容也将 换行符 换为一个不可见字符.
-    content=$(echo "$2"|tr '\n' '\a')
-
-    # 多行匹配, 选择文本匹配, 而不是正则.
-    echo "$content" |fgrep -qs -e "$regex"
+    if [[ "$result" ]]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 function perl_replace() {
