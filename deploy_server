@@ -426,7 +426,5 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
 }
 HEREDOC
 
-echo "Your's shadowsocks port: [0m[33m${ss_port}[0m"
-echo "Your's shadowsocks encrypt method: [0m[33m${ss_encrypt_method}[0m"
-echo "Your's shadowsocks password: [0m[33m${ss_password}[0m"
 echo 'Congratulations, Deploy succssful!'
+echo 'Please check generated client v2ray config file in router/opt/etc/v2ray.json'
