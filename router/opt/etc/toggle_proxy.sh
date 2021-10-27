@@ -12,24 +12,45 @@ function match_multiline() {
 }
 
 function perl_replace() {
-    local regexp replace
-    regexp=$1
-    # 注意 replace 当中的特殊变量, 例如, $& $1 $2 的手动转义.
+    local regexp=$1
+    # 注意：$1 在 perl 里面是一个矢量, 因此它有 $[ 会出错，因为 perl 会认为在通过 []
+    # 方法读取矢量的元素，所以记得在 placement 中 [ 也要转义。
     # 写完一定测试一下，perl 变量引用: http://www.perlmonks.org/?node_id=353259
-    replace=$2
-    escaped_replace=$(echo "$replace" |sed 's#"#\\"#g')
+    local replace=$2
+    local escaped_replace=$(echo "$replace" |sed 's#"#\\"#g')
 
-    perl -i -ne "s$regexp$replacegs; print \$_; unless ($& eq \"\") {print STDERR \"\`\033[0;33m$&\033[0m' was replaced with \`\033[0;33m${escaped_replace}\033[0m'\n\"};" "$3" "$4"
+    # 和 sed 类似，就是 g, 表示是否全局替换，不加只替换第一个
+    local replace_all_matched=$3
+    # 就是 s, 新增的话, . 也匹配 new_line
+    local match_newline=$4
+
+    if [ -z "$replace_all_matched" ]; then
+        globally=''
+    else
+        globally=' globally'
+    fi
+
+    perl -i -ne "s$regexp$replace${replace_all_matched}${match_newline}; print \$_; unless ($& eq \"\") {print STDERR \"\`\033[0;33m$&\033[0m' was replaced with \`\033[0;33m${escaped_replace}\033[0m'${globally} for \`[0m[0;34m$6[0m'!\n\"};" "$5" "$6"
 }
 
 # 为了支持多行匹配，使用 perl 正则, 比 sed 好用一百倍！
 function replace_multiline () {
-    local regexp replace file
-    regexp=$1
-    replace=$2
-    file=$3
+    local regexp=$1
+    local replace=$2
+    local file=$3
 
-    perl_replace "$regexp" "$replace" -0 "$file"
+    # 这个 -0 必须的，-0 表示，将空白字符作为 input record separators ($/)
+    # 这也意味着，它会将文件内的所有内容整体作为一个字符串一次性读取。
+    # 感觉类似于 -0777 (file slurp mode) ?
+    perl_replace "$regexp" "$replace" "g" "s" -0777 "$file"
+}
+
+function replace_multiline1 () {
+    local regexp=$1
+    local replace=$2
+    local file=$3
+
+    perl_replace "$regexp" "$replace" "" "s" -0777 "$file"
 }
 
 # disalbe_proxy 并没有停止 v2ray 服务.
@@ -99,14 +120,14 @@ function enable_proxy () {
             sed -i 's#"tproxy": ".*"#"tproxy": "tproxy"#' $v2ray_config
             if [ -e /opt/etc/use_fakedns ]; then
                 echo 'Apply fakeDNS config ...'
-                replace_multiline '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["fakedns"]' $v2ray_config
+                replace_multiline1 '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["fakedns"]' $v2ray_config
                 if ! match_multiline '"servers":\s*\[.*?"fakedns",.*?"8.8.4.4",' "$(cat $v2ray_config)"; then
-                    replace_multiline '("servers":\s*\[)(.*?)(\s*)"8.8.4.4",' '$1$3"fakedns",$2$3"8.8.4.4",' $v2ray_config
+                    replace_multiline1 '("servers":\s*\[)(.*?)(\s*)"8.8.4.4",' '$1$3"fakedns",$2$3"8.8.4.4",' $v2ray_config
                 fi
             else
                 echo 'Apply TProxy config ...'
-                replace_multiline '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["http", "tls"]' $v2ray_config
-                replace_multiline '("servers":\s*\[).*?(\s*)"8.8.4.4",' '$1$2"8.8.4.4",' $v2ray_config
+                replace_multiline1 '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["http", "tls"]' $v2ray_config
+                replace_multiline1 '("servers":\s*\[).*?(\s*)"8.8.4.4",' '$1$2"8.8.4.4",' $v2ray_config
             fi
         else
             if [ -e /opt/etc/use_fakedns ]; then
