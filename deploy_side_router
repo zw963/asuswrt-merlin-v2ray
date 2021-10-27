@@ -76,11 +76,11 @@ if ./v2ray -version; then
     set +e; systemctl stop v2ray; set -e
     cp v2ray v2ctl geosite.dat geoip-only-cn-private.dat /opt/sbin/
     cp systemd/system/v2ray.service /etc/systemd/system/v2ray.service
-    replace_regex 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
+    replace_regex1 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
 # Added by user
 LimitNPROC=500
 LimitNOFILE=1000000' /etc/systemd/system/v2ray.service
-    replace_string '/usr/local/bin/v2ray -config /usr/local/etc/v2ray/config.json' '/opt/sbin/v2ray -config /opt/etc/v2ray.json' /etc/systemd/system/v2ray.service
+    replace_string1 '/usr/local/bin/v2ray -config /usr/local/etc/v2ray/config.json' '/opt/sbin/v2ray -config /opt/etc/v2ray.json' /etc/systemd/system/v2ray.service
     # systemctl daemon-reload && systemctl start v2ray
 else
     echo 'Not valid v2ray version is supported by current router, please download correct version.'
