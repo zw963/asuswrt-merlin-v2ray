@@ -103,7 +103,6 @@ function apply_tproxy_rule () {
     iptables -t mangle -A V2RAY_UDP -p udp -j TPROXY --tproxy-mark 1 --on-port $local_v2ray_port
     iptables -t mangle -A V2RAY_UDP -p tcp -j TPROXY --tproxy-mark 1 --on-port $local_v2ray_port
 
-
     # step 4: V2Ray 内部处理，outbounds 的地方也设定为 255.
 
 
