@@ -1,5 +1,16 @@
 #!/bin/sh
 
+function match_multiline() {
+    escaped_regex=$(echo "$1" |sed 's#/#\\\/#g')
+    result=$(echo "$2" |perl -0777 -ne "print if /${escaped_regex}/s")
+
+    if [[ "$result" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 function perl_replace() {
     local regexp replace
     regexp=$1
@@ -88,7 +99,9 @@ function enable_proxy () {
             if [ -e /opt/etc/use_fakedns ]; then
                 echo 'Apply fakeDNS config ...'
                 replace_multiline '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["fakedns"]' /opt/etc/v2ray.json
-                replace_multiline '("servers":\s*\[)(.*?)(\s*)"8.8.4.4",' '$1$3"fakedns",$2$3"8.8.4.4",' /opt/etc/v2ray.json
+                if ! match_multiline '"servers":\s*\[.*?"fakedns",.*?"8.8.4.4",' "$(cat /opt/etc/v2ray.json)"; then
+                    replace_multiline '("servers":\s*\[)(.*?)(\s*)"8.8.4.4",' '$1$3"fakedns",$2$3"8.8.4.4",' /opt/etc/v2ray.json
+                fi
             else
                 echo 'Apply TProxy config ...'
                 replace_multiline '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["http", "tls"]' /opt/etc/v2ray.json
