@@ -71,7 +71,7 @@ uuid=$(uuidgen)
 replace_string 'NEWUUID' "${uuid}" /etc/v2ray/config.json
 
 cat <<'HEREDOC' > /etc/sysctl.d/99-v2ray.conf
-fs.file-max=51200
+fs.file-max=818354
 
 net.core.rmem_max=67108864
 net.core.wmem_max=67108864
