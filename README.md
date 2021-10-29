@@ -254,6 +254,10 @@ A success deploy on router should be looking like this.
 
 ![patch_router](/images/patch_router.png)
 
+### deploy code to side router
+
+![deploy_side_router](/images/deploy_side_router.jpg)
+
 ### Useful command for router
 
 You can run following command on router
@@ -268,7 +272,11 @@ You can run following command on router
 
 `/opt/etc/apply_iptables_rule.sh` `/opt/etc/clean_iptables_rule.sh` for enable/clean iptables rule.
 
-`/opt/etc/restart_dnsmasq.sh` for restart dnsmasq.
+`/opt/etc/restart_dnsmasq.sh` for restart dnsmasq. (for router which install dnsmasq only)
+
+`/opt/etc/check_google_use_socks5` check v2ray if works in router. (not work for fakeDNS mode)
+
+`/opt/etc/check_google_use_proxy` check v2ray transparent proxy if works in router. (not work for fakeDNS mode)
 
 ## Contributing
 
