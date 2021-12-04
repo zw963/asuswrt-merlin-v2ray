@@ -29,4 +29,4 @@ else
     systemctl stop v2ray
 fi
 
-/opt/sbin/v2ray -config /opt/etc/v2ray.json
+/opt/sbin/v2ray -config ${v2ray_config-/opt/etc/v2ray.json}

@@ -57,7 +57,7 @@ function replace_multiline1 () {
 # 因为即使关闭透明代理，仍可以通过浏览器插件使用 v2ray 的 socks 代理或 http 代理服务。
 
 dnsmasq_dir=/opt/etc/dnsmasq.d
-v2ray_config=/opt/etc/v2ray.json
+v2ray_config=${v2ray_config-/opt/etc/v2ray.json}
 
 function clean_dnsmasq_config () {
     if [ -d "$dnsmasq_dir" ]; then
