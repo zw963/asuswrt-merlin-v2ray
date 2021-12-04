@@ -19,7 +19,7 @@ else
     alias iptables='/opt/sbin/iptables'
 fi
 
-config_file=/opt/etc/v2ray.json
+config_file=${v2ray_config-/opt/etc/v2ray.json}
 
 local_v2ray_port=$(cat $config_file |grep '"inbounds"' -A10 |grep '"protocol" *: *"dokodemo-door"' -A10 |grep -o '"port": [0-9]*,' |grep -o '[0-9]*')
 
