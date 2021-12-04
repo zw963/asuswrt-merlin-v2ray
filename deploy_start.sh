@@ -510,11 +510,9 @@ function configure () {
                 ${@:2}
 }
 
-# function wget () {
-#     local url=$1
-#     local file=$(basename $url)
-#     command wget --no-check-certificate -c $url -O $file
-# }
+function wget () {
+    command wget --no-check-certificate -c "$@"
+}
 
 function curl () {
     command curl -sS -L "$@"
@@ -529,19 +527,19 @@ function download_and_extract () {
 
     case $ext in
         gz|tgz)
-            curl "$1" |tar -zxvf - -C "$dest" --strip-components=1
+            wget "$1" -O - |tar -zxvf - -C "$dest" --strip-components=1
             ;;
         bz2)
-            curl "$1" |tar -jxvf - -C "$dest" --strip-components=1
+            wget "$1" -O - |tar -jxvf - -C "$dest" --strip-components=1
             ;;
         xz|txz)
-            curl "$1" |tar -Jxvf - -C "$dest" --strip-components=1
+            wget "$1" -O - |tar -Jxvf - -C "$dest" --strip-components=1
             ;;
         zst|zstd)
-            curl "$1" |tar --use-compress-program zstd -xvf - -C "$dest" --strip-components=1
+            wget "$1" -O - |tar --use-compress-program zstd -xvf - -C "$dest" --strip-components=1
             ;;
         lzma)
-            curl "$1" |tar --lzma -xvf - -C "$dest" --strip-components=1
+            wget "$1" -O - |tar --lzma -xvf - -C "$dest" --strip-components=1
             ;;
         zip)
             local filename=$(basename $1)
@@ -554,7 +552,7 @@ function download_and_extract () {
             set -ue
             temp_dir=/tmp/$RANDOM$RANDOM
             mkdir -p $temp_dir &&
-                curl -o $temp_dir/$filename "$1" &&
+                wget -O $temp_dir/$filename "$1" &&
                 unzip $temp_dir/"$filename" -d "$temp_dir" &&
                 rm "$temp_dir/$filename" &&
                 shopt -s dotglob &&

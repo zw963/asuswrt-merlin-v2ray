@@ -46,7 +46,7 @@ download_and_extract https://github.com/v2fly/v2ray-core/releases/download/v${v2
 cd v2ray-v${v2ray_version} && chmod +x v2ctl v2ray
 
 if ! ./v2ray --version &>/dev/null; then
-    echo 'Not valid v2ray version is supported by current router, please check if download correct version.'
+    echo 'Not valid v2ray version is supported for current server, please check if download correct version.'
     exit
 fi
 
