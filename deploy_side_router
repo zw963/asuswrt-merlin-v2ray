@@ -6,7 +6,7 @@ export target=$1
 
 config=./router/opt/etc/v2ray.json
 
-if [ ! -e "$config" ];then
+if [ ! -e "$config" ]; then
     echo "Please create ${config} or generate it use deploy_v2ray+ss_to_vps before deploy to router."
     exit
 fi
@@ -75,12 +75,17 @@ cd predownloaded_binary && unzip -o v2ray-linux-64.zip && chmod +x v2ctl v2ray
 if ./v2ray -version; then
     set +e; systemctl stop v2ray; set -e
     cp v2ray v2ctl geosite.dat geoip-only-cn-private.dat /opt/sbin/
-    cp systemd/system/v2ray.service /etc/systemd/system/v2ray.service
+    cp systemd/system/*.service /etc/systemd/system
     replace_regex1 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
 # Added by user
 LimitNPROC=500
 LimitNOFILE=1000000' /etc/systemd/system/v2ray.service
+    replace_regex1 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
+# Added by user
+LimitNPROC=500
+LimitNOFILE=1000000' /etc/systemd/system/v2ray@.service
     replace_string1 '/usr/local/bin/v2ray -config /usr/local/etc/v2ray/config.json' '/opt/sbin/v2ray -config /opt/etc/v2ray.json' /etc/systemd/system/v2ray.service
+    replace_string1 '/usr/local/bin/v2ray -config /usr/local/etc/v2ray/%i.json' '/opt/sbin/v2ray -config /opt/etc/%i.json' /etc/systemd/system/v2ray@.service
     # systemctl daemon-reload && systemctl start v2ray
 else
     echo 'Not valid v2ray version is supported by current router, please download correct version.'
