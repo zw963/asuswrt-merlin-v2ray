@@ -7,7 +7,7 @@ export target=$1
 config=./router/opt/etc/v2ray.json
 
 if [ ! -e "$config" ];then
-    echo "Please create ${config} or generate it use deploy_v2ray+ss_to_vps before deploy to router."
+    echo "Please create ${config} or generate it use ./deploy_server before deploy to router."
     exit
 fi
 

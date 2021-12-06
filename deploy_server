@@ -38,7 +38,7 @@ set -eu
 # 为了让 QUIC 协议可以工作，这个必须。
 # package compile-tools
 
-v2ray_version=4.43.0
+v2ray_version=4.44.0
 arch=linux-64
 
 mkdir -p /usr/bin/v2ray
