@@ -173,4 +173,4 @@ sysctl -p > /dev/null
 sysctl net.ipv4.tcp_available_congestion_control |grep bbr
 sysctl -n net.ipv4.tcp_congestion_control |grep bbr
 
-echo "Congratulations, [0m[33mDeploy succssful[0m!"
+/opt/etc/patch_router && echo "Congratulations, [0m[33mDeploy succssful[0m!"
