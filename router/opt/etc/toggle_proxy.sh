@@ -158,6 +158,8 @@ function enable_proxy () {
     echo '[0m[0;33m => Proxy is enabled.[0m'
 }
 
+echo "Using config file ${v2ray_config}."
+
 if [ "$1" == 'disable' ]; then
     disable_proxy
 elif [ "$1" == 'enable' ]; then
