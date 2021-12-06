@@ -28,7 +28,7 @@ if [ -z "$local_v2ray_port" ]; then
     exit
 fi
 
-v2ray_server_ip=$(cat $config_file |grep 'protocol":\s*\"vmess' -A10 |grep -o '"address": ".*",'|cut -d: '-f2'|cut -d'"' -f2)
+v2ray_server_ip=$(cat $config_file |grep 'protocol":\s*\"\(vmess\|vless\)' -A10 |grep -o '"address": ".*",'|cut -d: '-f2'|cut -d'"' -f2)
 
 if [ -z "$v2ray_server_ip" ]; then
     echo 'can not find out remote VPS ip/domain in $config_file'

@@ -115,7 +115,7 @@ systemctl restart v2ray
 systemctl status v2ray
 
 # 从 server.json 来获取必须的一些信息.
-v2ray_port=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A10 |grep '"protocol" *: *"vmess"' -A3 |grep '"port"' |grep -o '[0-9]*')
+v2ray_port=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A10 |grep '"protocol" *: *"\(vmess\|vless\)"' -A3 |grep '"port"' |grep -o '[0-9]*')
 ss_port=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A3 |grep '"port"' |grep -o '[0-9]*')
 ss_encrypt_method=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"method"'|cut -d':' -f2|cut -d'"' -f2)
 ss_password=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"password"'|cut -d':' -f2|cut -d'"' -f2)
