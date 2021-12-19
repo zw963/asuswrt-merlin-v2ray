@@ -1,24 +1,46 @@
 #!/bin/sh
 
-self="$(\curl -sS https://gitee.com/zw963/deployment_bash/raw/v0.7.0/deploy_start.sh)" && eval "$self"
+self="$(\curl -sS https://gitee.com/zw963/deployment_bash/raw/v0.7.1/deploy_start.sh)" && eval "$self"
 
 export target=$1
+export use_xtls="$use_xtls"
+
+if [ "$use_xtls" ]; then
+    export service_name=xray
+    export another_service_name=v2ray
+else
+    export service_name=v2ray
+    export another_service_name=xray
+fi
 
 function postinstall () {
     set -u
     echo
-    echo 'Please wait copy generated client v2ray.json into local machine ...'
-    scp $target:/etc/v2ray/v2ray.json ./router/opt/etc/
+    echo 'Please wait copy generated client config into local machine ...'
+    scp $target:/etc/${service_name}/v2ray.json ./router/opt/etc/
     echo "Run [0m[33m./deploy_router admin@192.168.50.1[0m to deploy to router."
+    echo "Run [0m[33m./deploy_side_router root@side_router_ip[0m to deploy to side_router."
 }
 
-if grep -qs -e 'change_yours_password_here' server.json; then
-    echo 'v2ray server served as a shadowsocks server too.'
-    echo "You must change \`[0m[33mchange_yours_password_here[0m' to a NEW password in \`./server.json'!"
+if grep -qs -e 'change_yours_password_here' ${service_name}_server.json; then
+    echo '$service_name served as a shadowsocks server too.'
+    echo "You must change \`[0m[33mchange_yours_password_here[0m' to a NEW password in \`./${{service_name}_server.json}'!"
     exit
 fi
 
-copy server.json /etc/v2ray/config.json
+password=$(cat ${service_name}_server.json |grep '"password"' |cut -d':' -f2 |cut -d'"' -f2)
+sed -i "s#change_yours_password_here#${password}#" "${another_service_name}_server.json"
+
+if [ "$use_xtls" ] && grep -qs -e 'set_your_domain_name_here' ${service_name}_server.json; then
+    echo "You must change \`[0m[33mset_your_domain_name_here[0m' in \`./xray_server.json' to a a domain name which point to this host!"
+    echo "e.g. if your's domain name is: \`a.example.com', please set to \`example.com'."
+    exit
+fi
+
+copy xray_server.json /etc/xray/config.json
+copy v2ray_server.json /etc/v2ray/config.json
+copy predownloaded_binary/xray/xray.service /etc/systemd/system/xray.service
+copy predownloaded_binary/xray/xray@.service /etc/systemd/system/xray@.service
 
 deploy_start
 
@@ -33,24 +55,33 @@ set -eu
 # wget https://install.direct/go.sh
 # bash go.sh
 
-[ -f /etc/systemd/system/v2ray.service ] && systemctl stop v2ray
+if [ -f /etc/systemd/system/$service_name.service ]; then
+    set +e
+    systemctl stop $service_name
+    systemctl stop $another_service_name
+    systemctl disable $another_service_name
+    systemctl daemon-reload
+    set -e
+fi
 
-# 为了让 QUIC 协议可以工作，这个必须。
-# package compile-tools
-
+xray_version=1.5.0
 v2ray_version=4.44.0
 arch=linux-64
 
-mkdir -p /usr/bin/v2ray
-download_and_extract https://github.com/v2fly/v2ray-core/releases/download/v${v2ray_version}/v2ray-${arch}.zip v2ray-v${v2ray_version}
-cd v2ray-v${v2ray_version} && chmod +x v2ctl v2ray
+download_and_extract https://github.com/XTLS/Xray-core/releases/download/v${xray_version}/Xray-${arch}.zip Xray-v${xray_version}
+cd Xray-v${xray_version} && chmod +x xray
 
-if ! ./v2ray --version &>/dev/null; then
-    echo 'Not valid v2ray version is supported for current server, please check if download correct version.'
+if ! ./xray --version &>/dev/null; then
+    echo 'Not valid $service_name version is supported for current server, please check if download correct version.'
     exit
 fi
 
-cp v2ray v2ctl *.dat /usr/local/bin &&
+cp xray /usr/local/bin
+
+download_and_extract https://github.com/v2fly/v2ray-core/releases/download/v${v2ray_version}/v2ray-${arch}.zip v2ray-v${v2ray_version}
+cd v2ray-v${v2ray_version} &&
+    chmod +x v2ctl v2ray &&
+    cp v2ray v2ctl *.dat /usr/local/bin &&
     cp systemd/system/*.service /etc/systemd/system
 
 replace_regex 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
@@ -64,89 +95,54 @@ LimitNOFILE=1000000' /etc/systemd/system/v2ray@.service
 replace_regex '/usr/local/etc/v2ray/config.json' '/etc/v2ray/config.json' /etc/systemd/system/v2ray.service
 replace_regex '/usr/local/etc/v2ray/%i.json' '/etc/v2ray/%i.json' /etc/systemd/system/v2ray@.service
 
-sudo chown -R nobody:nobody /var/log/v2ray/
+mkdir -p /var/log/xray /var/log/v2ray
+chown nobody:nobody /var/log/xray /var/log/v2ray
 
 uuid=$(cat /proc/sys/kernel/random/uuid)
+# quic_key=$(uuidgen | sed 's/[-]//g' | head -c 20)
 
+replace_string 'NEWUUID' "${uuid}" /etc/xray/config.json
 replace_string 'NEWUUID' "${uuid}" /etc/v2ray/config.json
+# replace_string 'QUIC_KEY' "${quic_key}" /etc/xray/config.json
 
 config_sysctl_for_proxy
 
-mkdir -p /var/log/v2ray
+systemctl enable $service_name
 
-systemctl enable v2ray
-systemctl restart v2ray
-systemctl status v2ray
+if [ "$use_xtls" ]; then
+    domain_name=$(cat /etc/xray/config.json |grep certificateFile | sed 's#.*/etc/ssl/\(.*\)/fullchain.pem.*#\1#g')
+    deploy_tls "$domain_name" "systemctl restart $service_name"
+else
+    domain_name="localhost"
+fi
 
-# 从 server.json 来获取必须的一些信息.
-v2ray_port=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A10 |grep '"protocol" *: *"\(vmess\|vless\)"' -A3 |grep '"port"' |grep -o '[0-9]*')
-ss_port=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A3 |grep '"port"' |grep -o '[0-9]*')
-ss_encrypt_method=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"method"'|cut -d':' -f2|cut -d'"' -f2)
-ss_password=$(cat /etc/v2ray/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"password"'|cut -d':' -f2|cut -d'"' -f2)
+systemctl restart $service_name
+systemctl status $service_name
+systemctl enable $service_name
+
+# 从 server config.json 来获取必须的一些信息.
+v2ray_port=$(cat /etc/$service_name/config.json |grep '"inbounds"' -A10 |grep '"protocol" *: *"\(vmess\|vless\)"' -A3 |grep '"port"' |grep -o '[0-9]*')
+ss_port=$(cat /etc/$service_name/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A3 |grep '"port"' |grep -o '[0-9]*')
+ss_encrypt_method=$(cat /etc/$service_name/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"method"'|cut -d':' -f2|cut -d'"' -f2)
+ss_password=$(cat /etc/$service_name/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"password"'|cut -d':' -f2|cut -d'"' -f2)
 
 expose_port $v2ray_port
 expose_port $ss_port
 
 set -u
-cat <<HEREDOC > /etc/v2ray/v2ray.json
-// 本脚本当运行 deploy_v2ray+ss_to_vps 时自动生成。
-// 本脚本可作为 普通 v2ray client 脚本，也可以作为 ASUS merlin 路由器透明代理 v2ray 脚本，
-// 运行 ./v2ray+dnsmasq+dnscrypt2 admin@router.asus.com 部署这个配置文件到路由器。
-
-        // 尝试解释一下完整的 V2Ray 数据包流程
-
-        //    [公共步骤]
-        //    - 在 ASUS 路由器上，启动 V2Ray, 并且监听 65053 端口。
-        //    - 用户输入域名，例如：ip111 或 google。
-        //    - 域名发动到路由器 dnsmasq 监听的 53 端口。
-        //    - dnsmasq forward 所有（没有cache的查询 DNS 查询）到 V2Ray 监听的本地 65053 端口。
-        //    - 首次查询路由： 因为匹配 dns-inbound 中监听的端口,
-        //      所有发送到 65053 的内容，会被转发到到 8.8.4.4:53，并且通过对应的
-        //      dns-outbound 中的 DNS 协议，将IP 查询（即 A 和 AAAA）转发给内置的 DNS 服务器.
-
-        //    [访问国内网址 ip111.cn]
-        //    - 首先会使用 dns 配置中的 domains 策略对 ip111.cn 进行匹配.
-        //    - 因为 ip111.cn 域名属于 geosite:cn, 返回的 ip 为 121.41.110.161。
-        //    - 该 IP 属于浙江阿里云，属于 geoip:cn, 因此匹配，DNS 请求结束。
-        //    - 第一次进入路由: 内置 DNS 发出的 DNS 请求也会按照路由规则走, 确定使用
-        //      什么线路来从 202.99.192.66 获取 ip111 的地址,202.99.192.66 匹配 geoip:cn,
-        //      判定因此使用直连.(outboundTag: direct)
-        //      通过直连 202.99.192.66 的方式， 获取到 ip111.cn 正确 ip 地址 121.41.110.161
-        //    - 第二次进入路由: 但是仍然需要确定使用什么线路从 121.41.110.161 来获取内容。
-        //      121.41.110.161 匹配 geoip:cn, 判定因此使用直连.
-        //      走系统非加密直连，向 121.41.110.161 建立连接, 开始通信。
-
-        //    [访问国外网址 twitter.com]
-        //    - 仍然会使用 dns 配置中的 domains 策略对 twitter.com 进行匹配.
-        //      尝试使用 202.99.192.66, 因为国内的 DNS 返回的 ip 地址是一个国外的废弃 ip,
-        //      此时不满足 expectIPs, 因此不匹配.
-        //    - 内置的 DNS 向 https://dns.google/dns-query 发起针对 twitter.com 的请求.
-        //      上面的特殊写法代表 DNS over HTTPS (RFC8484, 简称DOH),DoH 默认不经过路由,
-        //      直接走第一个 outbound（DoH 域名需要在 hosts 中指定 IP 地址）, 即 proxy.
-        //    - 使用 proxy + DOH 的方式，从服务器获取 twitter.com 的正确 IP 地址 142.250.204.68.
-        //    - 第一次进入路由： 由于 inbounds 配置了sniffing，所以 IP 又被重置为了域名 twitter.com
-        //    - 由于 twitter.com 域名符合 geosite:geolocation-!cn，走 proxy
-        //    - 走系统加密直连， 建立连接，开始通信，完成.
-
-        //    [访问不在白名单中的国内网址 kid17.com]
-        //    - 首先会使用 dns 配置中的 domains 策略对 kid17.com 进行匹配.
-        //      尝试使用 202.99.192.66, 因为 kid17 不在 geosite:cn 里面, 因此不匹配.
-        //    - 内置的 DNS 向 https://dns.google/dns-query 发起针对 kid17.com 的请求.
-        //      上面的特殊写法代表 DNS over HTTPS (RFC8484, 简称DOH),DoH 默认不经过路由,
-        //      直接走第一个 outbound（DoH 域名需要在 hosts 中指定 IP 地址）, 即 proxy.
-        //    - 使用 proxy + DOH 的方式，从服务器获取 kid17.com 的正确 IP 地址 47.101.44.231
-        //    - 第一次进路由: 47.101.47.231, 此 IP 匹配 geoip:cn, 因此走直连.
-
-
-        // https://medium.com/@TachyonDevel/%E6%BC%AB%E8%B0%88%E5%90%84%E7%A7%8D%E9%BB%91%E7%A7%91%E6%8A%80%E5%BC%8F-dns-%E6%8A%80%E6%9C%AF%E5%9C%A8%E4%BB%A3%E7%90%86%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%E5%BA%94%E7%94%A8-62c50e58cbd0
-
+cat <<HEREDOC > /etc/$service_name/v2ray.json
+// 本脚本当运行 deploy_server 时自动生成。
+// 本脚本可作为 普通 v2ray 客户端脚本，也可以作为 ASUS 梅林路由器/旁路由 透明代理脚本，
+// 运行 ./deploy_router admin@router.asus.com 部署这个配置文件到路由器。
+// 运行 ./deploy_side_router root@one_ip 部署这个配置文件到旁路由。
 {
     "log": {
-        "loglevel": "none"
+        "loglevel": "warning"
     },
     "dns": {
         "hosts": {
-            "dns.google": "8.8.4.4"
+            "dns.google": "8.8.4.4",
+            "$domain_name": "$targetip"
         },
         "servers": [
             // V2Ray 会使用 DNS over HTTPS (RFC8484, 简称DOH) 进行查询。
@@ -168,7 +164,8 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                 "address": "localhost",
                 "port": 53,
                 "domains": [
-                    "router.asus.com"
+                    "router.asus.com",
+                    "arch.pool.ntp.org"
                 ]
             }
         ],
@@ -296,7 +293,7 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
         // 流量由主出站协议发出, 我们要确保主出站协议必须是 proxy.
         {
             "tag": "proxy",
-            "protocol": "vmess", // 出口协议
+            "protocol": "vless", // 出口协议
             "settings": {
                 "vnext": [
                     {
@@ -305,7 +302,10 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                         "users": [
                             {
                                 // 注意, vmess 加密默认开启, 也必须开启, 否则上不了网.
+                                // vless 则关闭加密，必须设定 encryption 为 none.
                                 // alterId 默认为 0, 表示开启 VMessAEAD.
+                                "encryption": "none",
+                                "flow": "xtls-rprx-splice",
                                 "id": "$uuid"  // 用户 ID，必须与服务器端配置相同
                             }
                         ]
@@ -313,18 +313,14 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
                 ]
             },
             "streamSettings": {
-                "network": "quic",  // 默认值是 tcp
-                "quicSettings": {
-                    "header": {
-                        "type": "wechat-video"
-                    }
+               "network": "tcp",
+               "security": "xtls", // 需要使用 XTLS
+                "xtlsSettings": {
+                    "serverName": "$domain_name" // 换成你的域名
                 },
                 "sockopt": {
                     "mark": 255
                 }
-            },
-            "mux": {
-                "enabled": true
             }
         },
         {
@@ -390,5 +386,16 @@ cat <<HEREDOC > /etc/v2ray/v2ray.json
 }
 HEREDOC
 
+if [ -z "$use_xtls" ]; then
+    replace_string '"protocol": "vless",' '"protocol": "vmess",' /etc/$service_name/v2ray.json
+    replace_multiline1 '"encryption": "none",\s*"flow": "xtls-rprx-.*?",' '' /etc/$service_name/v2ray.json
+    replace_multiline1 '"network": "tcp",\s*"security": "xtls".*?},' '"network": "quic",
+               "quicSettings": {
+                    "header": {
+                        "type": "wechat-video"
+                    }
+                },' /etc/$service_name/v2ray.json
+fi
+
 echo 'Congratulations, Deploy succssful!'
-echo 'Please check generated client v2ray config file in router/opt/etc/v2ray.json'
+echo 'Please check generated client config file at router/opt/etc/v2ray.json'

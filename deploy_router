@@ -11,6 +11,18 @@ if [ ! -e "$config" ];then
     exit
 fi
 
+function postinstall () {
+    set -u
+    echo
+    echo 'Please waiting for 10 seconds to check google available ...'
+    sleep 10
+    check_google=$(curl -so /dev/null -w 'Google: %{http_code}\n' google.com)
+    if [[ "$check_google" =~ 301|200 ]]; then
+        echo "visit google successful, Your's ip is: $(curl http://ipecho.net/plain; echo)"
+    else
+        echo 'visit google failed, something was wrong!'
+    fi
+}
 copy "$config" /opt/etc/
 copy router/opt/etc/apply_iptables_rule.sh /opt/etc/
 copy router/opt/etc/clean_iptables_rule.sh /opt/etc
