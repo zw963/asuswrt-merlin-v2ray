@@ -1,2 +1,3 @@
 /router/opt/etc/v2ray.json*
 logs/*
+predownloaded_binary/*.zip
