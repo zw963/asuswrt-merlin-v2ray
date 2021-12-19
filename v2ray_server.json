@@ -59,7 +59,7 @@
             {
                 "type": "field",
                 "ip": [
-                    "geoip:private"
+                    "ext:geoip-only-cn-private.dat:private"
                 ],
                 "outboundTag": "block"
             }
