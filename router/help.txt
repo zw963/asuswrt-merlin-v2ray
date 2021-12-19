@@ -1,0 +1,46 @@
+        // 尝试解释一下完整的 V2Ray 数据包流程
+
+        //    [公共步骤]
+        //    - 在 ASUS 路由器上，启动 V2Ray, 并且监听 65053 端口。
+        //    - 用户输入域名，例如：ip111 或 google。
+        //    - 域名发动到路由器 dnsmasq 监听的 53 端口。
+        //    - dnsmasq forward 所有（没有cache的查询 DNS 查询）到 V2Ray 监听的本地 65053 端口。
+        //    - 首次查询路由： 因为匹配 dns-inbound 中监听的端口,
+        //      所有发送到 65053 的内容，会被转发到到 8.8.4.4:53，并且通过对应的
+        //      dns-outbound 中的 DNS 协议，将IP 查询（即 A 和 AAAA）转发给内置的 DNS 服务器.
+
+        //    [访问国内网址 ip111.cn]
+        //    - 首先会使用 dns 配置中的 domains 策略对 ip111.cn 进行匹配.
+        //    - 因为 ip111.cn 域名属于 geosite:cn, 返回的 ip 为 121.41.110.161。
+        //    - 该 IP 属于浙江阿里云，属于 geoip:cn, 因此匹配，DNS 请求结束。
+        //    - 第一次进入路由: 内置 DNS 发出的 DNS 请求也会按照路由规则走, 确定使用
+        //      什么线路来从 202.99.192.66 获取 ip111 的地址,202.99.192.66 匹配 geoip:cn,
+        //      判定因此使用直连.(outboundTag: direct)
+        //      通过直连 202.99.192.66 的方式， 获取到 ip111.cn 正确 ip 地址 121.41.110.161
+        //    - 第二次进入路由: 但是仍然需要确定使用什么线路从 121.41.110.161 来获取内容。
+        //      121.41.110.161 匹配 geoip:cn, 判定因此使用直连.
+        //      走系统非加密直连，向 121.41.110.161 建立连接, 开始通信。
+
+        //    [访问国外网址 twitter.com]
+        //    - 仍然会使用 dns 配置中的 domains 策略对 twitter.com 进行匹配.
+        //      尝试使用 202.99.192.66, 因为国内的 DNS 返回的 ip 地址是一个国外的废弃 ip,
+        //      此时不满足 expectIPs, 因此不匹配.
+        //    - 内置的 DNS 向 https://dns.google/dns-query 发起针对 twitter.com 的请求.
+        //      上面的特殊写法代表 DNS over HTTPS (RFC8484, 简称DOH),DoH 默认不经过路由,
+        //      直接走第一个 outbound（DoH 域名需要在 hosts 中指定 IP 地址）, 即 proxy.
+        //    - 使用 proxy + DOH 的方式，从服务器获取 twitter.com 的正确 IP 地址 142.250.204.68.
+        //    - 第一次进入路由： 由于 inbounds 配置了sniffing，所以 IP 又被重置为了域名 twitter.com
+        //    - 由于 twitter.com 域名符合 geosite:geolocation-!cn，走 proxy
+        //    - 走系统加密直连， 建立连接，开始通信，完成.
+
+        //    [访问不在白名单中的国内网址 kid17.com]
+        //    - 首先会使用 dns 配置中的 domains 策略对 kid17.com 进行匹配.
+        //      尝试使用 202.99.192.66, 因为 kid17 不在 geosite:cn 里面, 因此不匹配.
+        //    - 内置的 DNS 向 https://dns.google/dns-query 发起针对 kid17.com 的请求.
+        //      上面的特殊写法代表 DNS over HTTPS (RFC8484, 简称DOH),DoH 默认不经过路由,
+        //      直接走第一个 outbound（DoH 域名需要在 hosts 中指定 IP 地址）, 即 proxy.
+        //    - 使用 proxy + DOH 的方式，从服务器获取 kid17.com 的正确 IP 地址 47.101.44.231
+        //    - 第一次进路由: 47.101.47.231, 此 IP 匹配 geoip:cn, 因此走直连.
+
+
+        // https://medium.com/@TachyonDevel/%E6%BC%AB%E8%B0%88%E5%90%84%E7%A7%8D%E9%BB%91%E7%A7%91%E6%8A%80%E5%BC%8F-dns-%E6%8A%80%E6%9C%AF%E5%9C%A8%E4%BB%A3%E7%90%86%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%E5%BA%94%E7%94%A8-62c50e58cbd0
