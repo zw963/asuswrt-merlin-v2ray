@@ -24,7 +24,7 @@ function postinstall () {
 
 if grep -qs -e 'change_yours_password_here' ${service_name}_server.json; then
     echo '$service_name served as a shadowsocks server too.'
-    echo "You must change \`[0m[33mchange_yours_password_here[0m' to a NEW password in \`./${{service_name}_server.json}'!"
+    echo "You must change \`[0m[33mchange_yours_password_here[0m' to a NEW password in \`./${service_name}_server.json'!"
     exit
 fi
 
