@@ -1,6 +1,6 @@
 #!/bin/bash
 
-self="$(cat deploy_start.sh)" && eval "$self"
+self="$(\curl -sS https://gitee.com/zw963/deployment_bash/raw/v0.7.0/deploy_start.sh)" && eval "$self"
 
 export target=$1
 
@@ -24,9 +24,12 @@ copy router/opt/etc/check_google_use_proxy.sh /opt/etc
 copy router/opt/etc/check_google_use_socks5.sh /opt/etc
 copy router/opt/etc/debug_v2ray.sh /opt/etc
 
-if [ -d predownloaded_binary ] && zip_file=$(ls -1 predownloaded_binary/v2ray-linux-arm*.zip |head -n1); then
+if [ -d predownloaded_binary ]; then
     echo 'Copy predownloaded binary to router ...'
-    copy $zip_file $zip_file
+    v2ray_zip_file=$(ls -1 predownloaded_binary/v2ray-linux-arm*.zip |head -n1)
+    copy $v2ray_zip_file $v2ray_zip_file
+    xray_zip_file=$(ls -1 predownloaded_binary/Xray-linux-arm*.zip |head -n1)
+    copy $xray_zip_file $xray_zip_file
 else
     ssh "$*" "rm -rf predownloaded_binary"
     echo 'Please download predownloaded binary into predownloaded_binary folder.'

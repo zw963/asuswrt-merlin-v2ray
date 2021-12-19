@@ -1,13 +1,13 @@
 #!/bin/bash
 
-self="$(cat deploy_start.sh)" && eval "$self"
+self="$(\curl -sS https://gitee.com/zw963/deployment_bash/raw/v0.7.0/deploy_start.sh)" && eval "$self"
 
 export target=$1
 
 config=./router/opt/etc/v2ray.json
 
 if [ ! -e "$config" ]; then
-    echo "Please create ${config} or generate it use deploy_v2ray+ss_to_vps before deploy to router."
+    echo "Please create ${config} or generate it use ./deploy_server before deploy to side router."
     exit
 fi
 
@@ -24,9 +24,12 @@ copy router/opt/etc/check_google_use_proxy.sh /opt/etc
 copy router/opt/etc/check_google_use_socks5.sh /opt/etc
 copy router/opt/etc/debug_v2ray.sh /opt/etc
 
-if [ -d predownloaded_binary ] && zip_file=$(ls -1 predownloaded_binary/v2ray-linux-*.zip |head -n1); then
+if [ -d predownloaded_binary ]; then
     echo 'Copy predownloaded binary to router ...'
-    copy $zip_file $zip_file
+    v2ray_zip_file=$(ls -1 predownloaded_binary/v2ray-linux-*.zip |head -n1)
+    copy $v2ray_zip_file $v2ray_zip_file
+    xray_zip_file=$(ls -1 predownloaded_binary/Xray-linux-*.zip |head -n1)
+    copy $xray_zip_file $xray_zip_file
 else
     ssh "$*" "rm -rf predownloaded_binary"
     echo 'Please download predownloaded binary into predownloaded_binary folder.'
@@ -70,11 +73,14 @@ set -eu
 # 还需要阻止自动 suspend, 以及 hibernate.(取消使用 unmask 替换 mask)
 # $ systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
 
-cd predownloaded_binary && unzip -o v2ray-linux-64.zip && chmod +x v2ctl v2ray
+cd predownloaded_binary &&
+    unzip -o v2ray-linux-64.zip &&
+    unzip -o Xray-linux-64.zip &&
+    chmod +x ./xray
 
-if ./v2ray -version; then
+if ./xray -version; then
     set +e; systemctl stop v2ray; set -e
-    cp v2ray v2ctl geosite.dat geoip-only-cn-private.dat /opt/sbin/
+    cp xray geosite.dat geoip-only-cn-private.dat /opt/sbin/
     cp systemd/system/*.service /etc/systemd/system
     replace_regex1 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
 # Added by user
@@ -84,15 +90,15 @@ LimitNOFILE=1000000' /etc/systemd/system/v2ray.service
 # Added by user
 LimitNPROC=500
 LimitNOFILE=1000000' /etc/systemd/system/v2ray@.service
-    replace_string1 '/usr/local/bin/v2ray -config /usr/local/etc/v2ray/config.json' '/opt/sbin/v2ray -config /opt/etc/v2ray.json' /etc/systemd/system/v2ray.service
-    replace_string1 '/usr/local/bin/v2ray -config /usr/local/etc/v2ray/%i.json' '/opt/sbin/v2ray -config /opt/etc/%i.json' /etc/systemd/system/v2ray@.service
-    # systemctl daemon-reload && systemctl start v2ray
+    replace_string1 '/usr/local/bin/v2ray -config /usr/local/etc/v2ray/config.json' '/opt/sbin/xray run -config /opt/etc/v2ray.json' /etc/systemd/system/v2ray.service
+    replace_string1 '/usr/local/bin/v2ray -config /usr/local/etc/v2ray/%i.json' '/opt/sbin/xray run -config /opt/etc/%i.json' /etc/systemd/system/v2ray@.service
+    systemctl daemon-reload
 else
-    echo 'Not valid v2ray version is supported by current router, please download correct version.'
+    echo 'Not valid xray version is supported by current router, please download correct version.'
     exit
 fi
 
-echo 'v2ray is installed'
+echo 'xray is installed'
 
 # ----------------------------------------------------
 #
@@ -135,42 +141,6 @@ systemctl daemon-reload && systemctl start v2ray && systemctl enable v2ray && sy
 systemctl start iptables-rule &&  systemctl enable iptables-rule
 cp /opt/etc/update_geosite.sh /etc/cron.weekly/
 
-cat <<'HEREDOC' > /etc/sysctl.d/99-v2ray.conf
-fs.file-max=818354
-
-net.core.rmem_max=67108864
-net.core.wmem_max=67108864
-net.core.netdev_max_backlog=250000
-net.core.somaxconn=4096
-
-net.ipv4.ip_forward=1
-net.ipv4.tcp_syncookies=1
-net.ipv4.tcp_tw_reuse=1
-net.ipv4.tcp_fin_timeout=30
-net.ipv4.tcp_keepalive_time=1200
-net.ipv4.ip_local_port_range=10000 65000
-net.ipv4.tcp_max_syn_backlog=8192
-net.ipv4.tcp_max_tw_buckets=5000
-net.ipv4.tcp_mem=25600 51200 102400
-net.ipv4.tcp_rmem=4096 87380 67108864
-net.ipv4.tcp_wmem=4096 65536 67108864
-net.ipv4.tcp_mtu_probing=1
-
-# 开启内核 fastopen, Linux 3.7 以上支持, 3.13 才默认开启.
-# 等价于 echo 3 > /proc/sys/net/ipv4/tcp_fastopen
-net.ipv4.tcp_fastopen=3
-HEREDOC
-
-if kernel_version_greater_than 4.9; then
-    modprobe tcp_bbr && lsmod | grep bbr
-    echo "net.core.default_qdisc=fq" >> /etc/sysctl.d/99-v2ray.conf
-    echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.d/99-v2ray.conf
-fi
-
-sysctl -p > /dev/null
-
-# test bbr is enabled
-sysctl net.ipv4.tcp_available_congestion_control |grep bbr
-sysctl -n net.ipv4.tcp_congestion_control |grep bbr
+config_sysctl_for_proxy
 
 /opt/etc/patch_router && echo "Congratulations, [0m[33mDeploy succssful[0m!"
