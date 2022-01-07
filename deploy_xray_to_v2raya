@@ -1,0 +1,17 @@
+#!/bin/bash
+
+folder=predownloaded_binary/v2raya
+
+set -u
+
+mkdir -p $folder
+cp predownloaded_binary/Xray-linux-64.zip $folder
+cd $folder
+unzip Xray-linux-64.zip
+id=$(docker ps |grep 'v2raya' |head -n1 |rev |cut -d' ' -f1 |rev)
+docker cp xray $id:/usr/bin/v2ray
+docker restart $id
+rm -rf $folder
+
+
+# tar xvf predownloaded_binary -C predownloaded_binary/xray
