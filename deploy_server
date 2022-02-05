@@ -165,7 +165,8 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
                 "port": 53,
                 "domains": [
                     "router.asus.com",
-                    "arch.pool.ntp.org"
+                    "arch.pool.ntp.org",
+                    "dl.google.com"
                 ]
             }
         ],
