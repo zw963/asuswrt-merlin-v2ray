@@ -1,6 +1,6 @@
 #!/bin/sh
 
-self="$(\curl -sS https://gitee.com/zw963/deployment_bash/raw/v0.7.2/deploy_start.sh)" && eval "$self"
+self="$(\curl -sS https://gitee.com/zw963/deployment_bash/raw/v0.7.6/deploy_start.sh)" && eval "$self"
 
 export target=$1
 export use_xtls="$use_xtls"
@@ -64,7 +64,7 @@ if [ -f /etc/systemd/system/$service_name.service ]; then
     set -e
 fi
 
-xray_version=1.5.3
+xray_version=1.5.4
 v2ray_version=4.44.0
 arch=linux-64
 
