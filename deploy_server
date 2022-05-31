@@ -1,6 +1,6 @@
 #!/bin/sh
 
-self="$(\curl -sS https://gitee.com/zw963/deployment_bash/raw/v0.7.6/deploy_start.sh)" && eval "$self"
+self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.1/deploy_start.sh)" && eval "$self"
 
 export target=$1
 export use_xtls="$use_xtls"
@@ -64,9 +64,11 @@ if [ -f /etc/systemd/system/$service_name.service ]; then
     set -e
 fi
 
-xray_version=1.5.4
+xray_version=1.5.5
 v2ray_version=4.44.0
 arch=linux-64
+
+set -e
 
 download_and_extract https://github.com/XTLS/Xray-core/releases/download/v${xray_version}/Xray-${arch}.zip Xray-v${xray_version}
 cd Xray-v${xray_version} && chmod +x xray
