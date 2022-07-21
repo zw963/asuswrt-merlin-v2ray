@@ -1,0 +1,13 @@
+#!/bin/bash
+
+self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.3/deploy_start.sh)" && eval "$self"
+
+export target=$1
+
+deploy_start
+
+set -eu
+
+domain_name=$(cat /etc/xray/config.json |grep certificateFile | sed 's#.*/etc/ssl/\(.*\)/fullchain.pem.*#\1#g')
+
+deploy_tls "$domain_name" "systemctl restart xray"
