@@ -1,3 +1,9 @@
+## NOTICE:
+
+The maintainer using `Xray` + `side router` solution daily.
+
+Other solution wil not be updated in time may not work.
+
 # Use Asuswrt Merlin as a transparent proxy, powered by V2ray
 
 ## Intro
