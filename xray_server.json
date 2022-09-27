@@ -42,8 +42,8 @@
             "protocol": "shadowsocks",
             "port": 22335, // 监听端口
             "settings": {
-                "method": "chacha20-ietf-poly1305",
-                "password": "change_yours_password_here"
+                "method": "2022-blake3-chacha20-poly1305",
+                "password": "SSPASS"
             }
         }
     ],
