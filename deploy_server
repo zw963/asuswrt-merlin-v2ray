@@ -22,14 +22,14 @@ function postinstall () {
     echo "Run [0m[33m./deploy_side_router root@side_router_ip[0m to deploy to side_router."
 }
 
-if grep -qs -e 'change_yours_password_here' ${service_name}_server.json; then
-    echo "$service_name served as a shadowsocks server too."
-    echo "You must change \`[0m[33mchange_yours_password_here[0m' to a NEW password in \`./${service_name}_server.json'!"
-    exit
-fi
+# if grep -qs -e 'change_yours_password_here' ${service_name}_server.json; then
+#     echo "$service_name served as a shadowsocks server too."
+#     echo "You must change \`[0m[33mchange_yours_password_here[0m' to a NEW password in \`./${service_name}_server.json'!"
+#     exit
+# fi
 
-password=$(cat ${service_name}_server.json |grep '"password"' |cut -d':' -f2 |cut -d'"' -f2)
-sed -i "s#change_yours_password_here#${password}#" "${another_service_name}_server.json"
+# password=$(cat ${service_name}_server.json |grep '"password"' |cut -d':' -f2 |cut -d'"' -f2)
+# sed -i "s#change_yours_password_here#${password}#" "${another_service_name}_server.json"
 
 if [ "$use_xtls" ] && grep -qs -e 'set_your_domain_name_here' ${service_name}_server.json; then
     echo "You must change \`[0m[33mset_your_domain_name_here[0m' in \`./xray_server.json' to a domain name which point to this host!"
@@ -107,6 +107,11 @@ replace_string 'NEWUUID' "${uuid}" /etc/xray/config.json
 replace_string 'NEWUUID' "${uuid}" /etc/v2ray/config.json
 # replace_string 'QUIC_KEY' "${quic_key}" /etc/xray/config.json
 
+ss_password=$(openssl rand -base64 32)
+
+replace_string 'SSPASS' "${ss_password}" /etc/xray/config.json
+replace_string 'SSPASS' "${ss_password}" /etc/v2ray/config.json
+
 config_sysctl_for_proxy
 
 systemctl enable $service_name
@@ -127,7 +132,7 @@ systemctl enable $service_name
 v2ray_port=$(cat /etc/$service_name/config.json |grep '"inbounds"' -A10 |grep '"protocol" *: *"\(vmess\|vless\)"' -A3 |grep '"port"' |grep -o '[0-9]*')
 ss_port=$(cat /etc/$service_name/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A3 |grep '"port"' |grep -o '[0-9]*')
 ss_encrypt_method=$(cat /etc/$service_name/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"method"'|cut -d':' -f2|cut -d'"' -f2)
-ss_password=$(cat /etc/$service_name/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"password"'|cut -d':' -f2|cut -d'"' -f2)
+# ss_password=$(cat /etc/$service_name/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"password"'|cut -d':' -f2|cut -d'"' -f2)
 
 expose_port $v2ray_port
 expose_port $ss_port
