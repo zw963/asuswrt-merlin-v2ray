@@ -23,7 +23,7 @@ function postinstall () {
 }
 
 if grep -qs -e 'change_yours_password_here' ${service_name}_server.json; then
-    echo '$service_name served as a shadowsocks server too.'
+    echo "$service_name served as a shadowsocks server too."
     echo "You must change \`[0m[33mchange_yours_password_here[0m' to a NEW password in \`./${service_name}_server.json'!"
     exit
 fi
@@ -32,7 +32,7 @@ password=$(cat ${service_name}_server.json |grep '"password"' |cut -d':' -f2 |cu
 sed -i "s#change_yours_password_here#${password}#" "${another_service_name}_server.json"
 
 if [ "$use_xtls" ] && grep -qs -e 'set_your_domain_name_here' ${service_name}_server.json; then
-    echo "You must change \`[0m[33mset_your_domain_name_here[0m' in \`./xray_server.json' to a a domain name which point to this host!"
+    echo "You must change \`[0m[33mset_your_domain_name_here[0m' in \`./xray_server.json' to a domain name which point to this host!"
     echo "e.g. if your's domain name is: \`a.example.com', please set to \`example.com'."
     exit
 fi
@@ -64,7 +64,7 @@ if [ -f /etc/systemd/system/$service_name.service ]; then
     set -e
 fi
 
-xray_version=1.5.5
+xray_version=1.6.0
 v2ray_version=4.44.0
 arch=linux-64
 
@@ -212,6 +212,8 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
                 "domain": [
                     // 这里添加域名白名单.
                     "geosite:cn",
+                    "router.asus.com",
+                    "arch.pool.ntp.org",
                     "dl.google.com",
                     "sourceforge.net"
                 ],
