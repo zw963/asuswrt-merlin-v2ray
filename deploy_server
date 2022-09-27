@@ -113,7 +113,8 @@ systemctl enable $service_name
 
 if [ "$use_xtls" ]; then
     domain_name=$(cat /etc/xray/config.json |grep certificateFile | sed 's#.*/etc/ssl/\(.*\)/fullchain.pem.*#\1#g')
-    deploy_tls "$domain_name" "systemctl restart $service_name"
+    # 默认不再部署 tls, 因为更新 xray 的时候不一定要更新证书
+    # deploy_tls "$domain_name" "systemctl restart $service_name"
 else
     domain_name="localhost"
 fi
