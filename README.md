@@ -289,6 +289,16 @@ You can run following command on router
 
 `/opt/etc/check_google_use_proxy` check v2ray transparent proxy if works in router. (not work for fakeDNS mode)
 
+## troubleshooting step by step
+
+1. ensure you can ping your's VPS from local, and can ssh login.
+2. ensure you can visit it use telnet, e.g. `telnet your.ip your.port`
+3. ensure your's domain name certificate not expired. (visit site if you have website, or see server xray log)
+4. ensure domain name connect to your ip correct.
+5. check config settings, especially, the `vless id`, `vless port`, `domain name` correct.
+6. test with `./check_google_use_socks5.sh`, ensure it work before test transparent proxy.
+6 Create a issue
+
 ## Contributing
 
   * [Bug reports](https://github.com/zw963/asuswrt-merlin-v2ray/issues)
