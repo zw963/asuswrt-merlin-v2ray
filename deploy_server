@@ -169,12 +169,15 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
             },
             {
                 // fakeDNS 必须，否则会被解析为 fake IP.
+                // 注意，某些视频网站视频无法播放，貌似就是因为访问网站时，
+                // 解析到错误的 IP 地址。
                 "address": "localhost",
                 "port": 53,
                 "domains": [
                     "router.asus.com",
                     "arch.pool.ntp.org",
-                    "dl.google.com"
+                    "dl.google.com",
+                    "douyin.com"
                 ]
             }
         ],
@@ -221,7 +224,8 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
                     "router.asus.com",
                     "arch.pool.ntp.org",
                     "dl.google.com",
-                    "sourceforge.net"
+                    "sourceforge.net",
+                    "douyin.com"
                 ],
                 "outboundTag": "direct"
             },
