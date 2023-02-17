@@ -299,7 +299,8 @@ You can run following command on router
 5. ensure domain name connect to your ip correct.
 6. check config settings, especially, the `vless id`, `vless port`, `domain name` correct.
 7. test with `./check_google_use_socks5.sh`, ensure it work before test transparent proxy.
-8 Create a issue
+8. check the current time in local/remote all correct.
+9. Create a issue
 
 ## Contributing
 
