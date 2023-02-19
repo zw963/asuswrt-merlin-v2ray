@@ -24,14 +24,14 @@ config_file=${v2ray_config-/opt/etc/v2ray.json}
 local_v2ray_port=$(cat $config_file |grep '"inbounds"' -A10 |grep '"protocol" *: *"dokodemo-door"' -A10 |grep -o '"port": [0-9]*,' |grep -o '[0-9]*')
 
 if [ -z "$local_v2ray_port" ]; then
-    echo 'can not find out v2ray port setting in $config_file'
+    echo "can not find out v2ray port setting in $config_file"
     exit
 fi
 
 v2ray_server_ip=$(cat $config_file |grep 'protocol":\s*\"\(vmess\|vless\)' -A10 |grep -o '"address": ".*",'|cut -d: '-f2'|cut -d'"' -f2)
 
 if [ -z "$v2ray_server_ip" ]; then
-    echo 'can not find out remote VPS ip/domain in $config_file'
+    echo "can not find out remote VPS ip/domain in $config_file"
     exit
 fi
 
