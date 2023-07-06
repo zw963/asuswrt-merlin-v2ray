@@ -4,6 +4,8 @@ self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.1/deploy_s
 
 export target=$1
 export use_xtls="$use_xtls"
+export new_uuid="$new_uuid"
+export new_ss_pwd="$new_ss_pwd"
 
 if [ "$use_xtls" ]; then
     export service_name=xray
@@ -17,7 +19,7 @@ function postinstall () {
     set -u
     echo
     echo 'Please wait copy generated client config into local machine ...'
-    scp $target:/etc/${service_name}/v2ray.json ./router/opt/etc/
+    scp $target:/etc/$service_name/v2ray.json ./router/opt/etc/
     echo "Run [0m[33m./deploy_router admin@192.168.50.1[0m to deploy to router."
     echo "Run [0m[33m./deploy_side_router root@side_router_ip[0m to deploy to side_router."
 }
@@ -64,7 +66,7 @@ if [ -f /etc/systemd/system/$service_name.service ]; then
     set -e
 fi
 
-xray_version=1.7.2
+xray_version=1.7.5
 v2ray_version=4.44.0
 arch=linux-64
 
@@ -100,17 +102,21 @@ replace_regex '/usr/local/etc/v2ray/%i.json' '/etc/v2ray/%i.json' /etc/systemd/s
 mkdir -p /var/log/xray /var/log/v2ray
 chown nobody:nobody /var/log/xray /var/log/v2ray
 
-uuid=$(cat /proc/sys/kernel/random/uuid)
-# quic_key=$(uuidgen | sed 's/[-]//g' | head -c 20)
+if [ "$new_uuid" != "0" ]; then
+    uuid=$(cat /proc/sys/kernel/random/uuid)
+    # quic_key=$(uuidgen | sed 's/[-]//g' | head -c 20)
 
-replace_string 'NEWUUID' "${uuid}" /etc/xray/config.json
-replace_string 'NEWUUID' "${uuid}" /etc/v2ray/config.json
+    replace_string 'NEWUUID' "${uuid}" /etc/xray/config.json
+    replace_string 'NEWUUID' "${uuid}" /etc/v2ray/config.json
+fi
 # replace_string 'QUIC_KEY' "${quic_key}" /etc/xray/config.json
 
-ss_password=$(openssl rand -base64 32)
+if [ "$new_ss_pwd" != "0" ]; then
+    ss_password=$(openssl rand -base64 32)
 
-replace_string 'SSPASS' "${ss_password}" /etc/xray/config.json
-replace_string 'SSPASS' "${ss_password}" /etc/v2ray/config.json
+    replace_string 'SSPASS' "${ss_password}" /etc/xray/config.json
+    replace_string 'SSPASS' "${ss_password}" /etc/v2ray/config.json
+fi
 
 config_sysctl_for_proxy
 
