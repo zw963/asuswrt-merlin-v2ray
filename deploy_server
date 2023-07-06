@@ -326,7 +326,7 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
                                 // vless 则关闭加密，必须设定 encryption 为 none.
                                 // alterId 默认为 0, 表示开启 VMessAEAD.
                                 "encryption": "none",
-                                "flow": "xtls-rprx-splice",
+                                "flow": "xtls-rprx-vision",
                                 "id": "$uuid"  // 用户 ID，必须与服务器端配置相同
                             }
                         ]
@@ -335,8 +335,8 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
             },
             "streamSettings": {
                "network": "tcp",
-               "security": "xtls", // 需要使用 XTLS
-                "xtlsSettings": {
+               "security": "tls", // 需要使用 XTLS
+                "tlsSettings": {
                     "serverName": "$domain_name" // 换成你的域名
                 },
                 "sockopt": {
