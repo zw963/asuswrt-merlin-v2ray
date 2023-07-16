@@ -1,13 +1,20 @@
 #!/bin/bash
 
-self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.3/deploy_start.sh)" && eval "$self"
+if grep -qs -e 'set_your_domain_name_here' ./xray_server.json; then
+    echo "You must change \`[0m[33mset_your_domain_name_here[0m' in \`./xray_server.json' to a domain name which point to this host!"
+    echo "e.g. if your's domain name is: \`a.example.com', please set to \`example.com'."
+    exit
+fi
 
-export target=$1
+
+self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.3/deploy_start.sh)" && eval "$self"
+export_variable target=$1
+export_variable domain_name=$(cat ./xray_server.json |grep certificateFile | sed 's#.*/etc/ssl/\(.*\)/fullchain.pem.*#\1#g')
+
+echo $domain_name
 
 deploy_start
 
 set -eu
-
-domain_name=$(cat /etc/xray/config.json |grep certificateFile | sed 's#.*/etc/ssl/\(.*\)/fullchain.pem.*#\1#g')
 
 deploy_tls "$domain_name" "systemctl restart xray"
