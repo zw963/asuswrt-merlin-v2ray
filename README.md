@@ -2,16 +2,16 @@
 
 The maintainer using `Xray` + `side router` solution daily.
 
-Other solution wil not be updated in time may not work.
+Other solution will not be updated in time may not work at all.
 
 # Use Asuswrt Merlin as a transparent proxy, powered by V2ray
 
 ## Intro
 
-This project is several scripts for config you ASUS router(merlin based) to serve
-as a transparent forward proxy.
+This project is several scripts for config you ASUS router(merlin based) or 
+Side router(A very old linux laptop) to serve as a transparent forward proxy.
 
-Since 2020-09-19, this project's release version just follow [V2Ray-core](https://github.com/v2fly/v2ray-core)'s version.
+Since 2023-07-16, this project's release version just follow [Xray-core](https://github.com/XTLS/Xray-core)'s version.
 
 ## Feature
 
