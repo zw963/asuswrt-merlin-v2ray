@@ -4,8 +4,7 @@ self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.1/deploy_s
 
 export target=$1
 export use_xtls="$use_xtls"
-export new_uuid="$new_uuid"
-export new_ss_pwd="$new_ss_pwd"
+export old_uuid=$(ssh $target cat /etc/xray/config.json 2>/dev/null |grep '"flow": "xtls-rprx' -B3 |grep '"id":' |cut -d: -f2 |cut -d'"' -f2)
 
 if [ "$use_xtls" ]; then
     export service_name=xray
@@ -102,13 +101,16 @@ replace_regex '/usr/local/etc/v2ray/%i.json' '/etc/v2ray/%i.json' /etc/systemd/s
 mkdir -p /var/log/xray /var/log/v2ray
 chown nobody:nobody /var/log/xray /var/log/v2ray
 
-if [ "$new_uuid" != "0" ]; then
+if [ "$old_uuid" != NEWUUID ]; then
+    uuid=$old_uuid
+else
     uuid=$(cat /proc/sys/kernel/random/uuid)
-    # quic_key=$(uuidgen | sed 's/[-]//g' | head -c 20)
-
-    replace_string 'NEWUUID' "${uuid}" /etc/xray/config.json
-    replace_string 'NEWUUID' "${uuid}" /etc/v2ray/config.json
 fi
+
+# quic_key=$(uuidgen | sed 's/[-]//g' | head -c 20)
+replace_string 'NEWUUID' "${uuid}" /etc/xray/config.json
+replace_string 'NEWUUID' "${uuid}" /etc/v2ray/config.json
+
 # replace_string 'QUIC_KEY' "${quic_key}" /etc/xray/config.json
 
 if [ "$new_ss_pwd" != "0" ]; then

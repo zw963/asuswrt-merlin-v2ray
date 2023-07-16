@@ -77,17 +77,22 @@ For better performance, update your's VPS linux kernel to a more recently versio
 
 ## How to use it
 
-Download this script from [release page](https://github.com/zw963/asuswrt-merlin-v2ray/releases)
+Download script from [release page](https://github.com/zw963/asuswrt-merlin-v2ray/releases)
 
 We assume your's linux VPS IP is `34.80.108.8`, your's router IP is `192.168.50.1`.
 
-### Deploy V2ray to one linux VPS, serve as both V2ray and Shadowsoks server.
-Test on CentOS 7.7, Ubuntu 18.0.4, Debian GNU/linux 9.
+### Deploy XRay to a linux VPS, serve as both XRay and Shadowsoks server.
 
-A success deploy on VPS should be looking like this on CentOS 7.
+Test on CentOS 8, Ubuntu 18.0.4, Debian GNU/linux 9.
+
+Following is the sample output for deploy Xray but keep exists config unchanged.
+
+If you deploy XRay instead of V2Ray, you must replace `set_your_domain_name_here` 
+into your's really domain name at first, and run `deploy_tls` to apply the https certificate
+if you are not set it correctly, then run `deploy_server` script like following:
 
 ```sh
- ╰─ $ use_xtls=true ./deploy_server root@$hk
+ ╰─ $ use_xtls=1 ./deploy_server root@$hk
 sending incremental file list
 xray_server.json
           2.31K 100%  914.06kB/s    0:00:00 (xfr#1, to-chk=0/1)
