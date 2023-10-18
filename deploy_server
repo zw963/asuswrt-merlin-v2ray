@@ -40,8 +40,8 @@ fi
 
 copy xray_server.json /etc/xray/config.json
 copy v2ray_server.json /etc/v2ray/config.json
-copy predownloaded_binary/xray/xray.service /etc/systemd/system/xray.service
-copy predownloaded_binary/xray/xray@.service /etc/systemd/system/xray@.service
+copy predownloaded_binary/services/xray.service /etc/systemd/system/xray.service
+copy predownloaded_binary/services/xray@.service /etc/systemd/system/xray@.service
 
 deploy_start
 
