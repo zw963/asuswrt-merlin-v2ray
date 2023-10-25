@@ -10,8 +10,11 @@ cd $folder
 unzip Xray-linux-64.zip
 id=$(docker ps |grep 'v2raya' |head -n1 |rev |cut -d' ' -f1 |rev)
 docker cp xray $id:/usr/bin/v2ray
-docker cp geosite.dat $id:/usr/bin/
-docker cp geoip.dat $id:/usr/bin/
+
+docker exec -it $id mkdir -p /usr/local/share/v2ray
+
+docker cp geosite.dat $id:/usr/local/share/v2ray
+docker cp geoip.dat $id:/usr/local/share/v2ray
 docker restart $id
 cd ..
 cd ..
