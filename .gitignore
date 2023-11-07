@@ -1,3 +1,8 @@
 /router/opt/etc/v2ray.json*
 logs/*
-predownloaded_binary/*.zip
+predownloaded_binary/v2ray.json
+predownloaded_binary/geoip.dat
+predownloaded_binary/geoip-only-cn-private.dat
+predownloaded_binary/geosite.dat
+predownloaded_binary/v2ray
+predownloaded_binary/xray
