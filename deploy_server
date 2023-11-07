@@ -65,7 +65,7 @@ if [ -f /etc/systemd/system/$service_name.service ]; then
     set -e
 fi
 
-xray_version=1.7.5
+xray_version=1.8.4
 v2ray_version=4.44.0
 arch=linux-64
 
