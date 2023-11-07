@@ -1,6 +1,6 @@
 #!/bin/sh
 
-self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.1/deploy_start.sh)" && eval "$self"
+self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.6/deploy_start.sh)" && eval "$self"
 
 export target=$1
 export use_xtls="$use_xtls"
@@ -18,7 +18,7 @@ function postinstall () {
     set -u
     echo
     echo 'Please wait copy generated client config into local machine ...'
-    scp $target:/etc/$service_name/v2ray.json ./router/opt/etc/
+    scp $target:{/etc/$service_name/v2ray.json,/usr/local/bin/geoip-only-cn-private.dat} ./predownloaded_binary/
     echo "Run [0m[33m./deploy_router admin@192.168.50.1[0m to deploy to router."
     echo "Run [0m[33m./deploy_side_router root@side_router_ip[0m to deploy to side_router."
 }
@@ -45,7 +45,7 @@ copy predownloaded_binary/services/xray@.service /etc/systemd/system/xray@.servi
 
 deploy_start
 
-set -eu
+set -eux
 
 # --------------------------------------------------------------------------------
 #
@@ -65,26 +65,31 @@ if [ -f /etc/systemd/system/$service_name.service ]; then
     set -e
 fi
 
-xray_version=1.8.4
-v2ray_version=4.44.0
+xray_version=$(github_latest_release XTLS/Xray-core)
+v2ray_version=$(github_latest_release v2fly/v2ray-core)
 arch=linux-64
 
 set -e
 
-download_and_extract https://github.com/XTLS/Xray-core/releases/download/v${xray_version}/Xray-${arch}.zip Xray-v${xray_version}
-cd Xray-v${xray_version} && chmod +x xray
+download_and_extract https://github.com/XTLS/Xray-core/releases/download/${xray_version}/Xray-${arch}.zip Xray-${xray_version}
+cd Xray-${xray_version} && chmod +x xray
 
 if ! ./xray --version &>/dev/null; then
-    echo 'Not valid $service_name version is supported for current server, please check if download correct version.'
+    echo 'Invalid xray version, please check if download correct version.'
     exit
 fi
 
 cp xray /usr/local/bin
 
-download_and_extract https://github.com/v2fly/v2ray-core/releases/download/v${v2ray_version}/v2ray-${arch}.zip v2ray-v${v2ray_version}
-cd v2ray-v${v2ray_version} &&
-    chmod +x v2ctl v2ray &&
-    cp v2ray v2ctl *.dat /usr/local/bin &&
+download_and_extract https://github.com/v2fly/v2ray-core/releases/download/${v2ray_version}/v2ray-${arch}.zip v2ray-${v2ray_version}
+cd v2ray-${v2ray_version} && chmod +x v2ray
+
+if ! ./v2ray version &>/dev/null; then
+    echo 'Invalid v2ray version, please check if download correct version.'
+    exit
+fi
+
+cp v2ray *.dat /usr/local/bin &&
     cp systemd/system/*.service /etc/systemd/system
 
 replace_regex 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
@@ -131,6 +136,9 @@ if [ "$use_xtls" ]; then
 else
     domain_name="localhost"
 fi
+
+# geoip_version=$(github_latest_release v2fly/geoip)
+# wget https://github.com/v2fly/geoip/releases/download/${geoip_version}/geoip-only-cn-private.dat -o geoip-only-cn-private.dat
 
 systemctl restart $service_name
 systemctl status $service_name
