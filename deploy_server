@@ -18,7 +18,9 @@ function postinstall () {
     set -u
     echo
     echo 'Please wait copy generated client config into local machine ...'
-    scp $target:{/etc/$service_name/v2ray.json,/usr/local/bin/geoip-only-cn-private.dat} ./predownloaded_binary/
+    scp $target:/etc/$service_name/v2ray.json ./predownloaded_binary/
+    scp $target:/usr/local/bin/{geoip-only-cn-private.dat,geoip.dat,geosite.dat,v2ray,xray} ./predownloaded_binary/
+    scp $target:/etc/systemd/system/{v2ray.service,v2ray@.service} ./predownloaded_binary/services/
     echo "Run [0m[33m./deploy_router admin@192.168.50.1[0m to deploy to router."
     echo "Run [0m[33m./deploy_side_router root@side_router_ip[0m to deploy to side_router."
 }
