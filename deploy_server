@@ -16,11 +16,12 @@ fi
 
 function postinstall () {
     set -u
+    mkdir -p ./downloaded_binary/amd64
     echo
     echo 'Please wait copy generated client config into local machine ...'
-    scp $target:/etc/$service_name/v2ray.json ./predownloaded_binary/
-    scp $target:/usr/local/bin/{geoip-only-cn-private.dat,geoip.dat,geosite.dat,v2ray,xray} ./predownloaded_binary/
-    scp $target:/etc/systemd/system/{v2ray.service,v2ray@.service} ./predownloaded_binary/services/
+    scp $target:/etc/$service_name/v2ray.json ./downloaded_binary/amd64/
+    scp $target:/usr/local/bin/{geoip-only-cn-private.dat,geoip.dat,geosite.dat,v2ray,xray} ./downloaded_binary/amd64/
+    scp $target:/etc/systemd/system/{v2ray.service,v2ray@.service} ./downloaded_binary/services/amd64/
     echo "Run [0m[33m./deploy_router admin@192.168.50.1[0m to deploy to router."
     echo "Run [0m[33m./deploy_side_router root@side_router_ip[0m to deploy to side_router."
 }
@@ -42,8 +43,8 @@ fi
 
 copy xray_server.json /etc/xray/config.json
 copy v2ray_server.json /etc/v2ray/config.json
-copy predownloaded_binary/services/xray.service /etc/systemd/system/xray.service
-copy predownloaded_binary/services/xray@.service /etc/systemd/system/xray@.service
+copy downloaded_binary/amd64/services/xray.service /etc/systemd/system/xray.service
+copy downloaded_binary/amd64/services/xray@.service /etc/systemd/system/xray@.service
 
 deploy_start
 

@@ -37,15 +37,13 @@ copy router/opt/etc/check_google_use_proxy.sh /opt/etc
 copy router/opt/etc/check_google_use_socks5.sh /opt/etc
 copy router/opt/etc/debug_v2ray.sh /opt/etc
 
-if [ -d predownloaded_binary ]; then
-    echo 'Copy predownloaded binary to router ...'
-    v2ray_zip_file=$(ls -1 predownloaded_binary/v2ray-linux-*.zip |head -n1)
-    copy $v2ray_zip_file $v2ray_zip_file
-    xray_zip_file=$(ls -1 predownloaded_binary/Xray-linux-*.zip |head -n1)
-    copy $xray_zip_file $xray_zip_file
+if [ -d downloaded_binary ]; then
+    echo 'Copy downloaded binary to router ...'
+    mkdir -p downloaded_binary
+    scp -r downloaded_binary/amd64 $target:download_binary
 else
-    ssh "$*" "rm -rf predownloaded_binary"
-    echo 'Please download predownloaded binary into predownloaded_binary folder.'
+    ssh "$*" "rm -rf downloaded_binary"
+    echo "Please run \`use_tls=true ./deploy_server root@some_ip' first to copy binary into downloaded_binary, then retry."
     exit 1
 fi
 
@@ -86,10 +84,7 @@ set -eu
 # 还需要阻止自动 suspend, 以及 hibernate.(取消使用 unmask 替换 mask)
 # $ systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
 
-cd predownloaded_binary &&
-    unzip -o v2ray-linux-64.zip &&
-    unzip -o Xray-linux-64.zip &&
-    chmod +x ./xray
+cd downloaded_binary
 
 if ./xray -version; then
     set +e; systemctl stop v2ray; set -e
