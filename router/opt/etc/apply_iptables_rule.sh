@@ -1,7 +1,11 @@
 #!/bin/sh
 
 if [ -t 1 ]; then
-    /opt/etc/clean_iptables_rule.sh
+    if [ -e /opt/etc/clean_iptables_rule.sh ]; then
+        /opt/etc/clean_iptables_rule.sh
+    else
+        ./clean_iptables_rule.sh
+    fi
 fi
 
 if iptables -t nat -C PREROUTING -p tcp -j V2RAY_TCP 2>/dev/null ||
@@ -13,13 +17,21 @@ echo -n 'Applying iptables rule ...'
 
 ipset_protocal_version=$(ipset -v 2>/dev/null |grep -o 'version.*[0-9]' |head -n1 |cut -d' ' -f2)
 
-if [ "$ipset_protocal_version" -gt 6 ]; then
-    alias iptables='/usr/sbin/iptables'
+if [ "${ipset_protocal_version:-7}" -gt 6 ]; then
+    alias iptables='sudo /usr/sbin/iptables'
+    alias ip='sudo ip'
 else
     alias iptables='/opt/sbin/iptables'
 fi
 
-config_file=${v2ray_config-/opt/etc/v2ray.json}
+
+if [ -n "$v2ray_config" ]; then
+    config_file=$v2ray_config
+elif [ -e /opt/etc/v2ray.json ]; then
+    config_file=/opt/etc/v2ray.json
+else
+    config_file=./v2ray.json
+fi
 
 local_v2ray_port=$(cat $config_file |grep '"inbounds"' -A10 |grep '"protocol" *: *"dokodemo-door"' -A10 |grep -o '"port": [0-9]*,' |grep -o '[0-9]*')
 
@@ -28,7 +40,7 @@ if [ -z "$local_v2ray_port" ]; then
     exit
 fi
 
-v2ray_server_ip=$(cat $config_file |grep 'protocol":\s*\"\(vmess\|vless\)' -A10 |grep -o '"address": ".*",'|cut -d: '-f2'|cut -d'"' -f2)
+v2ray_server_ip=$(cat $config_file |grep 'protocol":\s*"\(vmess\|vless\)' -A10 |grep -o '"address": ".*",'|cut -d: '-f2'|cut -d'"' -f2)
 
 if [ -z "$v2ray_server_ip" ]; then
     echo "can not find out remote VPS ip/domain in $config_file"
@@ -103,7 +115,7 @@ function apply_tproxy_rule () {
     # }
     # 来确保 V2Ray 可以识别这种流量。
     iptables -t mangle -A V2RAY_UDP -p udp -j TPROXY --tproxy-mark 1 --on-port $local_v2ray_port
-    iptables -t mangle -A V2RAY_UDP -p tcp -j TPROXY --tproxy-mark 1 --on-port $local_v2ray_port
+    iptables -t mangle -A V2RAY_UDP -p tcp ! --dport 22 -j TPROXY --tproxy-mark 1 --on-port $local_v2ray_port
 
     # step 4: V2Ray 内部处理，outbounds 的地方也设定为 255.
 
@@ -114,14 +126,18 @@ function apply_tproxy_rule () {
 
 function apply_gateway_rule () {
     # 这个 rule 仅仅在 tproxy 模式下需要, 否则，在路由器中无法访问外网.
-    echo -n ' Apply router rule ...'
+    echo -n ' Apply gateway rule ...'
 
     iptables -t mangle -N V2RAY_MASK # 代理网关本机
 
-    # iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p tcp -j RETURN
-    # iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
+    # step 1: 所有针对本地地址、VPS 服务器地址的流量直连
+    iptables -t mangle -A V2RAY_MASK -d 127.0.0.0/8 -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d $v2ray_server_ip -j RETURN
 
-    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p tcp -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
+
+    # 避免影响时间同步服务
     iptables -t mangle -A V2RAY_MASK -p udp --dport 123 -j RETURN
     iptables -t mangle -A V2RAY_MASK -p udp --dport 323 -j RETURN
 
