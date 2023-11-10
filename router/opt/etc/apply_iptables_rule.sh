@@ -1,10 +1,12 @@
 #!/bin/sh
 
+ROOT=${0%/*}/
+
 if [ -t 1 ]; then
     if [ -e /opt/etc/clean_iptables_rule.sh ]; then
         /opt/etc/clean_iptables_rule.sh
     else
-        ./clean_iptables_rule.sh
+        $ROOT/clean_iptables_rule.sh
     fi
 fi
 
