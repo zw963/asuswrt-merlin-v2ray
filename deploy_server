@@ -171,7 +171,6 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
     },
     "dns": {
         "hosts": {
-            "dns.google": "8.8.4.4",
             "$domain_name": "$targetip"
         },
         "servers": [
@@ -179,8 +178,9 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
             // DoH 默认走第一个 outbound 来查询 （DoH 域名需要在 hosts 中指定 IP 地址）
             "8.8.4.4",
             {
-                // localhost 代表使用运营商的 DNS.
-                "address": "localhost",
+                // 180.76.76.76 是百度的 DNS，你可以替换为当地运营商的
+                // 这里之前是 localhost, 造成了死循环，严重影响访问国内网站的性能。
+                "address": "180.76.76.76",
                 "port": 53,
                 "domains": [
                     "geosite:cn"
@@ -193,7 +193,7 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
                 // fakeDNS 必须，否则会被解析为 fake IP.
                 // 注意，某些视频网站视频无法播放，貌似就是因为访问网站时，
                 // 解析到错误的 IP 地址。
-                "address": "localhost",
+                "address": "180.76.76.76",
                 "port": 53,
                 "domains": [
                     "router.asus.com",
