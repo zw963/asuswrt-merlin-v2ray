@@ -22,9 +22,9 @@ function postinstall () {
     scp $target:/etc/$service_name/v2ray.json ./downloaded_binary/
     scp $target:/usr/local/bin/{geoip-only-cn-private.dat,geoip.dat,geosite.dat,v2ray,xray} ./downloaded_binary/amd64/
     scp $target:/etc/systemd/system/{v2ray.service,v2ray@.service} ./downloaded_binary/amd64/services/
-    cp router/opt/etc/{apply_iptables_rule.sh,clean_iptables_rule.sh,update_geosite.sh} ./downloaded_binary/amd64/
+    cp router/opt/etc/{apply_iptables_rule.sh,clean_iptables_rule.sh,update_geodata.sh} ./downloaded_binary/amd64/
     cd ./downloaded_binary/amd64/
-    chmod +x apply_iptables_rule.sh clean_iptables_rule.sh update_geosite.sh xray v2ray
+    chmod +x apply_iptables_rule.sh clean_iptables_rule.sh update_geodata.sh xray v2ray
     echo "Run [0m[33m./deploy_router admin@192.168.50.1[0m to deploy to router."
     echo "Run [0m[33m./deploy_side_router root@side_router_ip[0m to deploy to side_router."
 }
