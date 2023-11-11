@@ -27,8 +27,7 @@ copy "$config" /opt/etc/
 copy router/opt/etc/apply_iptables_rule.sh /opt/etc/
 copy router/opt/etc/clean_iptables_rule.sh /opt/etc
 copy router/opt/etc/enable_swap.sh /opt/etc
-copy router/opt/etc/update_geosite.sh /opt/etc
-copy router/opt/etc/update_big_geosite.sh /opt/etc
+copy router/opt/etc/update_geodata.sh /opt/etc
 copy router/opt/etc/restart_dnsmasq.sh /opt/etc
 copy router/opt/etc/toggle_proxy.sh /opt/etc
 copy router/opt/etc/patch_router /opt/etc
@@ -126,8 +125,7 @@ cd /opt/etc
 chmod +x apply_iptables_rule.sh \
       clean_iptables_rule.sh \
       enable_swap.sh \
-      update_geosite.sh \
-      update_big_geosite.sh \
+      update_geodata.sh \
       restart_dnsmasq.sh \
       toggle_proxy.sh \
       patch_router \
@@ -146,7 +144,7 @@ chmod +x apply_iptables_rule.sh \
 add_service wan-start 'cru a run-services "*/3 * * * * /jffs/scripts/services-start"'
 add_service wan-start 'cru a run-iptables "*/3 * * * * /opt/etc/apply_iptables_rule.sh"'
 # 每个周日的 5: 25 升级一次 geosites 数据.
-add_service wan-start 'cru a update_geosites "25 5 * * 0 /opt/etc/update_geosite.sh"'
+add_service wan-start 'cru a update_geodata "25 5 * * 0 /opt/etc/update_geodata.sh"'
 /jffs/scripts/wan-start
 
 # Because newest asus merlin introduce AMTM, please enable swap file there if need it.

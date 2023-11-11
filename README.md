@@ -282,7 +282,7 @@ You can run following command on router
 
 `/opt/etc/patch_router` basically, just disable proxy, and then enable it.
 
-`/opt/etc/update_geosite.sh` or `/opt/etc/update_big_geosite.sh` is used for update geosite data.
+`/opt/etc/update_geodata.sh` is used for update geosite data.
 
 `/opt/etc/enable_swap.sh` is used for enable swap for insufficient RAM device.(if not use amtm enable it already.)
 

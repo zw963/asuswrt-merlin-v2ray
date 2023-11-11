@@ -28,8 +28,7 @@ ssh "$*" "sudo mkdir -p /opt/etc /opt/sbin /var/log/v2ray"
 copy "$config" /opt/etc/
 copy router/opt/etc/apply_iptables_rule.sh /opt/etc/
 copy router/opt/etc/clean_iptables_rule.sh /opt/etc
-copy router/opt/etc/update_geosite.sh /opt/etc
-copy router/opt/etc/update_big_geosite.sh /opt/etc
+copy router/opt/etc/update_geodata.sh /opt/etc
 copy router/opt/etc/toggle_proxy.sh /opt/etc
 copy router/opt/etc/patch_router /opt/etc
 copy router/opt/etc/iptables-rule.service /etc/systemd/system
@@ -117,8 +116,7 @@ echo 'xray is installed'
 cd /opt/etc
 chmod +x apply_iptables_rule.sh \
       clean_iptables_rule.sh \
-      update_geosite.sh \
-      update_big_geosite.sh \
+      update_geodata.sh \
       toggle_proxy.sh \
       patch_router \
       check_google_use_proxy.sh \
@@ -147,7 +145,7 @@ systemctl stop firewalld &>/dev/null
 set -e
 systemctl daemon-reload && systemctl start v2ray && systemctl enable v2ray && systemctl status v2ray
 systemctl start iptables-rule &&  systemctl enable iptables-rule
-cp /opt/etc/update_geosite.sh /etc/cron.weekly/
+cp /opt/etc/update_geodata.sh /etc/cron.weekly/
 
 config_sysctl_for_proxy
 
