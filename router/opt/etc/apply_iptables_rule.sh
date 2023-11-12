@@ -22,6 +22,7 @@ ipset_protocal_version=$(ipset -v 2>/dev/null |grep -o 'version.*[0-9]' |head -n
 if [ "${ipset_protocal_version:-7}" -gt 6 ]; then
     alias iptables='sudo /usr/sbin/iptables'
     alias ip='sudo ip'
+    alias modprobe='sudo modprobe'
 else
     alias iptables='/opt/sbin/iptables'
 fi
