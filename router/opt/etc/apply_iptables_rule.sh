@@ -137,8 +137,8 @@ function apply_gateway_rule () {
     iptables -t mangle -A V2RAY_MASK -d 127.0.0.0/8 -j RETURN
     iptables -t mangle -A V2RAY_MASK -d $v2ray_server_ip -j RETURN
 
-    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p tcp -j RETURN
-    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
+    # 这里不要瞎改成和上面 tproxy 一样，否则，（可能是因为 53 端口走代理），会造成旁路由重启后不会同步时间。
+    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -j RETURN
 
     # 避免影响时间同步服务
     iptables -t mangle -A V2RAY_MASK -p udp --dport 123 -j RETURN
