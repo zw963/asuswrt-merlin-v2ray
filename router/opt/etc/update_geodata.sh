@@ -30,7 +30,7 @@ wget -c $geosite_url -O $ROOT/${sitedata}.new
 if [ $? == 0 ]; then
     if  [ -e /opt/etc ]; then
         # 假设是路由器环境
-        cd /opt/sbin
+        cd $ROOT
 
         if [ -e /opt/etc/init.d/S22v2ray ]; then
             /opt/etc/init.d/S22v2ray stop
