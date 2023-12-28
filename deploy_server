@@ -237,10 +237,7 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
             },
             {
                 "type": "field",
-                "ip": [
-                    "ext:geoip-only-cn-private.dat:cn",
-                    "ext:geoip-only-cn-private.dat:private"
-                ],
+                "ip": ["180.76.76.76"],
                 "outboundTag": "direct"
             },
             {
@@ -262,16 +259,26 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
             },
             {
                 "type": "field",
+                "ip": [
+                    "ext:geoip-only-cn-private.dat:cn",
+                    "ext:geoip-only-cn-private.dat:private"
+                ],
+                "outboundTag": "direct"
+            },
+            {
+                "type": "field",
                 "domain": [
                     // 这里添加必须走 proxy 的域名例外.
-                    "services.googleapis.cn"
+                    // "services.googleapis.cn",
+                    "raw.githubusercontent.com",
+                    "github.githubassets.com"
                 ],
                 "outboundTag": "proxy"
             },
             {
                 "type": "field",
                 "domain": [
-                    "geosite:category-ads"
+                    "geosite:category-ads-all"
                 ],
                 "outboundTag": "block"
             }
@@ -282,14 +289,14 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
             "tag": "transparent",
             "protocol": "dokodemo-door",
             "port": 1081, // 透明代理 1081 端口
-            "sniffing": {
-                "enabled": true,
-                "destOverride": ["http", "tls"]
-            },
             "settings": {
                 "network": "tcp,udp",
                 // 当值为 true 时，dokodemo-door 会识别出由 iptables 转发而来的数据，并转发到相应的目标地址。详见 传输配置 中的 tproxy 设置。
                 "followRedirect": true
+            },
+            "sniffing": {
+                "enabled": true,
+                "destOverride": ["http", "tls"]
             },
             "streamSettings": {
                 "sockopt": {
@@ -318,12 +325,12 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
         {
             "protocol": "socks", // 入口协议为 SOCKS 5
             "port": 1080, // 监听端口
+            "settings": {
+                "auth": "noauth"  //socks的认证设置，noauth 代表不认证，由于 socks 通常在客户端使用，所以这里不认证
+            },
             "sniffing": {
                 "enabled": true,
                 "destOverride": ["http", "tls"]
-            },
-            "settings": {
-                "auth": "noauth"  //socks的认证设置，noauth 代表不认证，由于 socks 通常在客户端使用，所以这里不认证
             }
         },
         {
@@ -391,6 +398,12 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
             // 识别这是一个 DNS 请求， 并发送到内部 DNS 进行查询.
             "tag": "dns-outbound",
             "protocol": "dns",
+            "settings": {
+                "address": "8.8.4.4"
+            },
+            "proxySettings": {
+                "tag": "proxy"
+            },
             "streamSettings": {
                 "sockopt": {
                     "mark": 255
@@ -403,10 +416,9 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
             "settings": {
                 // 这里我选择加上试试, 搞不好我的方案, freedom 真的又去访问 dnsmasq
                 // 的 53 端口, 又被转到 V2ray 的 DNS 呢.
-                "domainStrategy": "UseIP"
+                "domainStrategy": "UseIPv4"
             },
             "streamSettings": {
-                "network": "tcp",  // 这是默认值
                 "sockopt": {
                     "mark": 255
                 }
