@@ -93,8 +93,7 @@ function apply_tproxy_rule () {
     iptables -t mangle -A V2RAY_UDP -d 127.0.0.0/8 -j RETURN
     iptables -t mangle -A V2RAY_UDP -d $v2ray_server_ip -j RETURN
 
-    # step 2: 但是针对局域网地址，tcp 总是流量直连，目标地址是 53 的 udp 流量(局域网的DNS流量)，
-    # 则继续向前走.
+    # step 2: 但是针对局域网地址，tcp 总是流量直连，局域网内目标地址是 53 的 udp 流量，则继续走代理。
     iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p tcp -j RETURN
     iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
 
@@ -138,7 +137,11 @@ function apply_gateway_rule () {
     iptables -t mangle -A V2RAY_MASK -d $v2ray_server_ip -j RETURN
 
     # 这里不要瞎改成和上面 tproxy 一样，否则，（可能是因为 53 端口走代理），会造成旁路由重启后不会同步时间。
-    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -j RETURN
+    # 但是只有让 UDP 53 走代理，才能避免来自网通路由器的 DNS 污染，只能先开启吧。
+    # 如果是旁路由，记得替换下面两行为：iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -j RETURN
+    # 来确保时间同步服务可以正常工作。
+    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p tcp -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
 
     # 避免影响时间同步服务
     iptables -t mangle -A V2RAY_MASK -p udp --dport 123 -j RETURN
