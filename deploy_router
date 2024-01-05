@@ -1,6 +1,6 @@
 #!/bin/bash
 
-self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.7/deploy_start.sh)" && eval "$self"
+self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.8/deploy_start.sh)" && eval "$self"
 # self="$(\cat /home/common/Project/deployment_bash/deploy_start.sh)" && eval "$self"
 
 export_variable target=$1
