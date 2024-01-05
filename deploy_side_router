@@ -120,7 +120,7 @@ set -e
 cp $service_name geosite.dat geoip-only-cn-private.dat /opt/sbin/
 cp v2ray.json /opt/etc
 
-cp systemd/system/*.service /etc/systemd/system
+cp services/*.service /etc/systemd/system
 replace_regex1 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
 # Added by user
 LimitNPROC=500
@@ -132,8 +132,6 @@ LimitNOFILE=1000000' /etc/systemd/system/v2ray@.service
 replace_string1 '/usr/local/bin/v2ray -config /usr/local/etc/v2ray/config.json' '/opt/sbin/xray run -config /opt/etc/v2ray.json' /etc/systemd/system/v2ray.service
 replace_string1 '/usr/local/bin/v2ray -config /usr/local/etc/v2ray/%i.json' '/opt/sbin/xray run -config /opt/etc/%i.json' /etc/systemd/system/v2ray@.service
 systemctl daemon-reload
-
-echo 'xray is installed'
 
 # ----------------------------------------------------
 #
