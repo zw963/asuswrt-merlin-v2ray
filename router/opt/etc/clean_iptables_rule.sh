@@ -36,10 +36,6 @@ while iptables -t nat -C PREROUTING -p udp -j V2RAY_DNS 2>/dev/null; do
     iptables -t nat -D PREROUTING -p udp -j V2RAY_DNS
     sleep $sleep
 done
-while iptables -t nat -C OUTPUT -p udp -j V2RAY_DNS 2>/dev/null; do
-    iptables -t nat -D OUTPUT -p udp -j V2RAY_DNS
-    sleep $sleep
-done
 iptables -t nat -F V2RAY_DNS 2>/dev/null
 iptables -t nat -X V2RAY_DNS 2>/dev/null
 

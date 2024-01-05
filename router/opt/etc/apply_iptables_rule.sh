@@ -132,13 +132,9 @@ function apply_DNS_redirect () {
     echo -n 'Redirect all DNS request to localhost port 65053'
 
     iptables -t nat -N V2RAY_DNS
-    # iptables -t nat -A V2RAY_DNS -d 192.168.0.0/16 -p tcp -j RETURN
-    # iptables -t nat -A V2RAY_DNS -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
-    # iptables -t nat -A V2RAY_DNS -p tcp ! --dport 22 -j TPROXY --tproxy-mark 1 --on-port $local_v2ray_port
     iptables -t nat -A V2RAY_DNS -d 192.168.0.0/16 -p udp --dport 53 -j REDIRECT --to-ports 65053
 
-    # iptables -t nat -A PREROUTING -p udp -j V2RAY_DNS
-    # iptables -t nat -A OUTPUT -p tcp -j V2RAY_DNS
+    iptables -t nat -A PREROUTING -p udp -j V2RAY_DNS # 这个让外部设备阻止 DNS 污染生效
 }
 
 function apply_socket_rule () {
