@@ -57,6 +57,8 @@ function postinstall () {
     else
         echo 'visit google failed, something was wrong!'
     fi
+    echo 'Try dig github.githubassets.com'
+    dig github.githubassets.com
 }
 
 copy router/opt/etc/apply_iptables_rule.sh /opt/etc/
