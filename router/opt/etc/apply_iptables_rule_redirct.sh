@@ -32,10 +32,10 @@ fi
 
 if [ -n "$v2ray_config" ]; then
     config_file=$v2ray_config
-elif [ -e /opt/etc/v2ray.json ]; then
-    config_file=/opt/etc/v2ray.json
+elif [ -e /opt/etc/config.json ]; then
+    config_file=/opt/etc/config.json
 else
-    config_file=./v2ray.json
+    config_file=./config.json
 fi
 
 sed -i 's#"tproxy": ".*"#"tproxy": "redirect"#' $config_file

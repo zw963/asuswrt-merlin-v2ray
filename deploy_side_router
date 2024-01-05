@@ -10,7 +10,7 @@ For the correct Arch name, check https://github.com/XTLS/Xray-core/releases asse
 Current arch using: ${arch}"
 
 config_folder=./downloaded_binary/${arch}
-config=${config_folder}/v2ray.json
+config=${config_folder}/config.json
 
 if [ ! -f "$config" ];then
     echo "Please create ${config} or generate it use ./deploy_server root@some_ip before deploy to side router."
@@ -118,19 +118,19 @@ systemctl stop v2ray
 set -e
 
 cp $service_name geosite.dat geoip-only-cn-private.dat /opt/sbin/
-cp v2ray.json /opt/etc
+cp services/{$service_name.service,$service_name@.service} /etc/systemd/system
+cp config.json /opt/etc
 
-cp services/*.service /etc/systemd/system
 replace_regex1 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
 # Added by user
 LimitNPROC=500
-LimitNOFILE=1000000' /etc/systemd/system/v2ray.service
+LimitNOFILE=1000000' /etc/systemd/system/$service_name.service
 replace_regex1 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
 # Added by user
 LimitNPROC=500
-LimitNOFILE=1000000' /etc/systemd/system/v2ray@.service
-replace_string1 '/usr/local/bin/v2ray -config /usr/local/etc/v2ray/config.json' '/opt/sbin/xray run -config /opt/etc/v2ray.json' /etc/systemd/system/v2ray.service
-replace_string1 '/usr/local/bin/v2ray -config /usr/local/etc/v2ray/%i.json' '/opt/sbin/xray run -config /opt/etc/%i.json' /etc/systemd/system/v2ray@.service
+LimitNOFILE=1000000' /etc/systemd/system/$service_name@.service
+replace_string1 "/usr/local/bin/$service_name run -config /etc/$service_name/config.json" "/opt/sbin/$service_name run -config /opt/etc/config.json" /etc/systemd/system/$service_name.service
+replace_string1 "/usr/local/bin/$service_name run -config /etc/$service_name/%i.json" "/opt/sbin/$service_name run -config /opt/etc/%i.json" /etc/systemd/system/$service_name@.service
 systemctl daemon-reload
 
 # ----------------------------------------------------
@@ -150,7 +150,7 @@ chmod +x apply_iptables_rule.sh \
       debug_v2ray.sh
 
 # 默认配置文件适用于路由器配合 dnsmasq 一起使用，使用旁路由时，直接在 53 端口监听即可。
-replace_string '65053' '53' /opt/etc/v2ray.json
+replace_string '65053' '53' /opt/etc/config.json
 
 /opt/etc/clean_iptables_rule.sh && chmod -x /opt/etc/apply_iptables_rule.sh
 chmod +x /opt/etc/apply_iptables_rule.sh && /opt/etc/apply_iptables_rule.sh

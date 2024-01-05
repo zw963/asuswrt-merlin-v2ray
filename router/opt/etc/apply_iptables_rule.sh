@@ -32,10 +32,10 @@ fi
 
 if [ -n "$v2ray_config" ]; then
     config_file=$v2ray_config
-elif [ -e /opt/etc/v2ray.json ]; then
-    config_file=/opt/etc/v2ray.json
+elif [ -e /opt/etc/config.json ]; then
+    config_file=/opt/etc/config.json
 else
-    config_file=./v2ray.json
+    config_file=./config.json
 fi
 
 local_v2ray_port=$(cat $config_file |grep '"inbounds"' -A10 |grep '"protocol" *: *"dokodemo-door"' -A10 |grep -o '"port": [0-9]*,' |grep -o '[0-9]*')
@@ -106,16 +106,16 @@ function apply_gateway_rule () {
     iptables -t mangle -A V2RAY_MASK -d 127.0.0.0/8 -j RETURN
     iptables -t mangle -A V2RAY_MASK -d $v2ray_server_ip -j RETURN
 
+    # 避免影响时间同步服务
+    iptables -t mangle -A V2RAY_MASK -p udp --dport 123 -j RETURN
+    iptables -t mangle -A V2RAY_MASK -p udp --dport 323 -j RETURN
+
     # 这里不要瞎改成和上面 tproxy 一样，否则，（可能是因为 53 端口走代理），会造成旁路由重启后不会同步时间。
     # 但是只有让 UDP 53 走代理，才能避免来自网通路由器的 DNS 污染，只能先开启吧。
     # 如果是旁路由，记得替换下面两行为：iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -j RETURN
     # 来确保时间同步服务可以正常工作。
     iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p tcp -j RETURN
     iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p udp ! --dport $dns_port -j RETURN
-
-    # 避免影响时间同步服务
-    iptables -t mangle -A V2RAY_MASK -p udp --dport 123 -j RETURN
-    iptables -t mangle -A V2RAY_MASK -p udp --dport 323 -j RETURN
 
     # 直连 SO_MARK 为 0xff 的流量(0xff 是 16 进制数，数值上等同与上面V2Ray 配置的 255)，此规则目的是避免代理本机(网关)流量出现回环问题
     iptables -t mangle -A V2RAY_MASK -j RETURN -m mark --mark 0xff
