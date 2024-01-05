@@ -17,14 +17,18 @@ fi
 
 echo -n 'Applying iptables rule ...'
 
-ipset_protocal_version=$(ipset -v 2>/dev/null |grep -o 'version.*[0-9]' |head -n1 |cut -d' ' -f2)
-
-if [ "${ipset_protocal_version:-7}" -gt 6 ]; then
-    alias iptables='sudo /usr/sbin/iptables'
+if ! opkg --version &>/dev/null; then
+    # 旁路由
+    alias iptables='sudo iptables'
     alias ip='sudo ip'
     alias modprobe='sudo modprobe'
+    dns_port=53
+    sleep=0.2
 else
-    alias iptables='/opt/sbin/iptables'
+    # 路由器
+    use_asuswrt=true
+    dns_port=65053
+    sleep=1
 fi
 
 
@@ -95,7 +99,7 @@ function apply_tproxy_rule () {
 
     # step 2: 但是针对局域网地址，tcp 总是流量直连，局域网内目标地址是 53 的 udp 流量，则继续走代理。
     iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p tcp -j RETURN
-    iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
+    iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp ! --dport $dns_port -j RETURN
 
     # step 5: 从 V2Ray 发出的流量，再次经过时 netfilter 时，如果是 V2Ray 标记过
     # 为 255 的流量，全部走直连.
@@ -141,7 +145,7 @@ function apply_gateway_rule () {
     # 如果是旁路由，记得替换下面两行为：iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -j RETURN
     # 来确保时间同步服务可以正常工作。
     iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p tcp -j RETURN
-    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p udp ! --dport $dns_port -j RETURN
 
     # 避免影响时间同步服务
     iptables -t mangle -A V2RAY_MASK -p udp --dport 123 -j RETURN
@@ -156,6 +160,19 @@ function apply_gateway_rule () {
     iptables -t mangle -A V2RAY_MASK -p tcp -j MARK --set-mark 1   # 给 TCP 打标记，重路由
 
     iptables -t mangle -A OUTPUT -j V2RAY_MASK # 应用规则
+}
+
+function apply_DNS_redirect () {
+    echo -n 'Redirect all DNS request to localhost port 65053'
+
+    iptables -t nat -N V2RAY_DNS
+    # iptables -t nat -A V2RAY_DNS -d 192.168.0.0/16 -p tcp -j RETURN
+    # iptables -t nat -A V2RAY_DNS -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
+    # iptables -t nat -A V2RAY_DNS -p tcp ! --dport 22 -j TPROXY --tproxy-mark 1 --on-port $local_v2ray_port
+    iptables -t nat -A V2RAY_DNS -d 192.168.0.0/16 -p udp --dport 53 -j REDIRECT --to-ports 65053
+
+    # iptables -t nat -A PREROUTING -p udp -j V2RAY_DNS
+    # iptables -t nat -A OUTPUT -p tcp -j V2RAY_DNS
 }
 
 function apply_socket_rule () {
@@ -175,6 +192,10 @@ else
         # 似乎在 fakedns 模式下不工作。
         apply_gateway_rule
         # apply_socket_rule
+
+        if [ "$use_asuswrt" == true ]; then
+            apply_DNS_redirect
+        fi
     else
         apply_redirect_rule
     fi
