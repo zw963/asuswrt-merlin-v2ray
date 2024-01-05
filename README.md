@@ -32,7 +32,7 @@ For transparent proxy, current three mode is supported, will select automaticall
 redirect mode require dnsmasq serve as LAN DNS server, if you asuswrt merlin, this is default mode.
 others mode V2Ray and basically build tools(For use with QUIC) is the only dependency.
 
-You can always check router if check TProxy use:
+You can always check weather router support TProxy:
 
 ```sh
 # modprobe xt_TPROXY
@@ -45,7 +45,7 @@ You can switch modes after deploy successful.
 ### Switch to use old redirect transparent proxy (need dnsmasq)
 
 ```sh
-$: ./use_redirect_proxy admin@192.168.50.1
+$: ./deploy_router_use_direct admin@192.168.50.1
 ```
 
 ### Switch to use fakedns based transparent proxy (need TProxy support)

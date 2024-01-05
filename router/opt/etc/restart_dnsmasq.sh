@@ -20,7 +20,6 @@ if ! grep -qs "^conf-dir=$dnsmasq_dir/,\*\.conf$" /etc/dnsmasq.conf; then
 fi
 
 echo 'server=/#/127.0.0.1#65053' > $dnsmasq_dir/v2ray.conf
-# echo 'server=/#/127.0.0.1#65053' >> /etc/dnsmasq.conf
 
 if [ "$1" == 'with_log' ]; then
     # 开启日志.
@@ -33,3 +32,5 @@ fi
 dnsmasq --test 2>/dev/null && kill -HUP $(ps |grep dnsmasq |grep nobody |awk '{print $1}')
 
 echo '[0m[1;32m done.[0m'
+
+date "+%Y%m%d_%H:%M:%S" > /tmp/restart_dnsmasq_was_run_at

@@ -5,5 +5,5 @@ if [ -z "$*" ]; then
     exit
 fi
 
-ssh "$*" 'rm -f /opt/etc/use_redirect_proxy && touch /opt/etc/use_fakedns'
+ssh "$*" 'touch /opt/etc/use_fakedns'
 ssh "$*" /opt/etc/patch_router

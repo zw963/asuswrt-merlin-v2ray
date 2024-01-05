@@ -56,27 +56,23 @@ function replace_multiline1 () {
 # disalbe_proxy 并没有停止 v2ray 服务.
 # 因为即使关闭透明代理，仍可以通过浏览器插件使用 v2ray 的 socks 代理或 http 代理服务。
 
-dnsmasq_dir=/opt/etc/dnsmasq.d
 v2ray_config=${v2ray_config-/opt/etc/v2ray.json}
-
-function clean_dnsmasq_config () {
-    if [ -d "$dnsmasq_dir" ]; then
-        rm -f $dnsmasq_dir/v2ray.conf
-    fi
-}
 
 function disable_proxy () {
     echo '[0m[0;33m => Disabling proxy ...[0m'
 
     if [ -e /opt/etc/init.d/S22v2ray ]; then
         chmod -x /opt/etc/init.d/S22v2ray && sh /opt/etc/init.d/S22v2ray stop
-    # else
-    #     systemctl disable v2ray && systemctl stop v2ray
+        # else
+        #     systemctl disable v2ray && systemctl stop v2ray
     fi
     /opt/etc/clean_iptables_rule.sh && chmod -x /opt/etc/apply_iptables_rule.sh
 
     if which dnsmasq &>/dev/null; then
-        clean_dnsmasq_config
+        dnsmasq_dir=/opt/etc/dnsmasq.d
+
+        [ -d "$dnsmasq_dir" ] && rm -f $dnsmasq_dir/v2ray.conf
+
         chmod +x /opt/etc/restart_dnsmasq.sh && /opt/etc/restart_dnsmasq.sh
     fi
 
@@ -86,30 +82,27 @@ function disable_proxy () {
 function enable_proxy () {
     echo '[0m[0;33m => Enabling proxy ...[0m'
 
-    if [ -e /opt/etc/use_redirect_proxy ]; then
-        sed -i 's#"tproxy": ".*"#"tproxy": "redirect"#' $v2ray_config
-    else
-        if modprobe xt_TPROXY &>/dev/null; then
-            sed -i 's#"tproxy": ".*"#"tproxy": "tproxy"#' $v2ray_config
-            if [ -e /opt/etc/use_fakedns ]; then
-                echo 'Apply fakeDNS config ...'
-                replace_multiline1 '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["fakedns"]' $v2ray_config
-                if ! match_multiline '"servers":\s*\[.*?"fakedns",.*?"8.8.4.4",' "$(cat $v2ray_config)"; then
-                    replace_multiline1 '("servers":\s*\[)(.*?)(\s*)"8.8.4.4",' '$1$3"fakedns",$2$3"8.8.4.4",' $v2ray_config
-                fi
-            else
-                echo 'Apply TProxy config ...'
-                replace_multiline1 '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["http", "tls"]' $v2ray_config
-                replace_multiline1 '("servers":\s*\[).*?(\s*)"8.8.4.4",' '$1$2"8.8.4.4",' $v2ray_config
+    if ! opkg --version &>/dev/null; then
+        # 旁路由
+        alias modprobe='sudo modprobe'
+    fi
+
+    if modprobe xt_TPROXY &>/dev/null; then
+        sed -i 's#"tproxy": ".*"#"tproxy": "tproxy"#' $v2ray_config
+
+        if [ -e /opt/etc/use_fakedns ]; then
+            echo 'Apply fakeDNS config ...'
+            replace_multiline1 '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["fakedns"]' $v2ray_config
+            if ! match_multiline '"servers":\s*\[.*?"fakedns",.*?"8.8.4.4",' "$(cat $v2ray_config)"; then
+                replace_multiline1 '("servers":\s*\[)(.*?)(\s*)"8.8.4.4",' '$1$3"fakedns",$2$3"8.8.4.4",' $v2ray_config
             fi
         else
-            if [ -e /opt/etc/use_fakedns ]; then
-                echo -e "[0m[1;31mERROR:[0m Enable fakeDNS need router support TProxy!"
-                exit 1
-            else
-                sed -i 's#"tproxy": ".*"#"tproxy": "redirect"#' $v2ray_config
-            fi
+            echo 'Apply TProxy config ...'
+            replace_multiline1 '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["http", "tls"]' $v2ray_config
+            replace_multiline1 '("servers":\s*\[).*?(\s*)"8.8.4.4",' '$1$2"8.8.4.4",' $v2ray_config
         fi
+    else
+        echo 'Not support tproxy, exit ...'
     fi
 
     if grep '"loglevel":\s*"debug"' $v2ray_config; then
@@ -120,12 +113,8 @@ function enable_proxy () {
 
     if [ -e /opt/etc/init.d/S22v2ray ]; then
         chmod +x /opt/etc/init.d/S22v2ray && sh /opt/etc/init.d/S22v2ray start
-    # else
-    #     systemctl start v2ray && systemctl enable v2ray
-    fi
-
-    if which dnsmasq &>/dev/null; then
-        chmod +x /opt/etc/restart_dnsmasq.sh && /opt/etc/restart_dnsmasq.sh
+        # else
+        #     systemctl start v2ray && systemctl enable v2ray
     fi
 
     echo '[0m[0;33m => Proxy is enabled.[0m'
