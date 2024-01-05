@@ -97,151 +97,8 @@ sending incremental file list
 xray_server.json
           2.31K 100%  914.06kB/s    0:00:00 (xfr#1, to-chk=0/1)
 
-sent 372 bytes  received 59 bytes  287.33 bytes/sec
-total size is 2.31K  speedup is 5.35
-sending incremental file list
-v2ray_server.json
-          1.89K 100%  501.95kB/s    0:00:00 (xfr#1, to-chk=0/1)
+......
 
-sent 348 bytes  received 53 bytes  267.33 bytes/sec
-total size is 1.89K  speedup is 4.70
-sending incremental file list
-xray.service
-            449 100%    0.00kB/s    0:00:00 (xfr#1, to-chk=0/1)
-
-sent 90 bytes  received 41 bytes  87.33 bytes/sec
-total size is 449  speedup is 3.43
-sending incremental file list
-xray@.service
-            445 100%    0.00kB/s    0:00:00 (xfr#1, to-chk=0/1)
-
-sent 91 bytes  received 41 bytes  88.00 bytes/sec
-total size is 445  speedup is 3.37
-***********************************************************
-Remote deploy scripts is started !!
-***********************************************************
-Warning: The unit file, source configuration file or drop-ins of xray.service changed on disk. Run 'systemctl daemon-reload' to reload units.
-Archive:  /tmp/202722541/Xray-linux-64.zip
-  inflating: /tmp/202722541/README.md  
-  inflating: /tmp/202722541/LICENSE  
-  inflating: /tmp/202722541/geoip.dat  
-  inflating: /tmp/202722541/xray     
-  inflating: /tmp/202722541/geosite.dat  
-Archive:  /tmp/1530510623/v2ray-linux-64.zip
-  inflating: /tmp/1530510623/geoip-only-cn-private.dat  
-  inflating: /tmp/1530510623/vpoint_socks_vmess.json  
-  inflating: /tmp/1530510623/v2ctl   
-  inflating: /tmp/1530510623/geosite.dat  
-  inflating: /tmp/1530510623/config.json  
-  inflating: /tmp/1530510623/vpoint_vmess_freedom.json  
-   creating: /tmp/1530510623/systemd/
-   creating: /tmp/1530510623/systemd/system/
-  inflating: /tmp/1530510623/systemd/system/v2ray@.service  
-  inflating: /tmp/1530510623/systemd/system/v2ray.service  
-  inflating: /tmp/1530510623/v2ray   
-  inflating: /tmp/1530510623/geoip.dat  
-`RestartPreventExitStatus=23' was replaced with `RestartPreventExitStatus=23
-# Added by user
-LimitNPROC=500
-LimitNOFILE=1000000' globally for `/etc/systemd/system/v2ray.service'!
-tcp_bbr                20480  31
-net.ipv4.tcp_available_congestion_control = reno cubic bbr
-bbr
-`RestartPreventExitStatus=23' was replaced with `RestartPreventExitStatus=23
-# Added by user
-LimitNPROC=500
-LimitNOFILE=1000000' globally for `/etc/systemd/system/v2ray@.service'!
-`/usr/local/etc/v2ray/config.json' was replaced with `/etc/v2ray/config.json' globally for `/etc/systemd/system/v2ray.service'!
-`/usr/local/etc/v2ray/%i.json' was replaced with `/etc/v2ray/%i.json' globally for `/etc/systemd/system/v2ray@.service'!
-`NEWUUID' was replaced with `c8b7fd23-3e74-4300-b9fe-fe7f2a4e27df' globally for `/etc/xray/config.json'!
-`NEWUUID' was replaced with `c8b7fd23-3e74-4300-b9fe-fe7f2a4e27df' globally for `/etc/v2ray/config.json'!
-Last metadata expiration check: 1 day, 20:00:56 ago on Sat 18 Dec 2021 06:48:13 AM HKT.
-Package mlocate-0.26-20.el8.x86_64 is already installed.
-Dependencies resolved.
-Nothing to do.
-Complete!
-Last metadata expiration check: 1 day, 20:00:59 ago on Sat 18 Dec 2021 06:48:13 AM HKT.
-Package git-2.27.0-1.el8.x86_64 is already installed.
-Dependencies resolved.
-Nothing to do.
-Complete!
-Last metadata expiration check: 1 day, 20:01:01 ago on Sat 18 Dec 2021 06:48:13 AM HKT.
-Package coreutils-8.30-12.el8.x86_64 is already installed.
-Dependencies resolved.
-Nothing to do.
-Complete!
-Last metadata expiration check: 1 day, 20:01:03 ago on Sat 18 Dec 2021 06:48:13 AM HKT.
-Package yum-utils-4.0.21-3.el8.noarch is already installed.
-Dependencies resolved.
-Nothing to do.
-Complete!
-Last metadata expiration check: 1 day, 20:01:05 ago on Sat 18 Dec 2021 06:48:13 AM HKT.
-Package epel-release-8-13.el8.noarch is already installed.
-Dependencies resolved.
-Nothing to do.
-Complete!
-Last metadata expiration check: 1 day, 20:01:07 ago on Sat 18 Dec 2021 06:48:13 AM HKT.
-Package socat-1.7.4.1-1.el8.x86_64 is already installed.
-Dependencies resolved.
-Nothing to do.
-Complete!
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100  204k  100  204k    0     0  1357k      0 --:--:-- --:--:-- --:--:-- 1357k
-[Mon Dec 20 02:49:22 HKT 2021] Installing from online archive.
-[Mon Dec 20 02:49:22 HKT 2021] Downloading https://github.com/acmesh-official/acme.sh/archive/master.tar.gz
-[Mon Dec 20 02:49:23 HKT 2021] Extracting master.tar.gz
-[Mon Dec 20 02:49:24 HKT 2021] Installing to /root/.acme.sh
-[Mon Dec 20 02:49:24 HKT 2021] Installed to /root/.acme.sh/acme.sh
-[Mon Dec 20 02:49:24 HKT 2021] Installing alias to '/root/.bashrc'
-[Mon Dec 20 02:49:24 HKT 2021] OK, Close and reopen your terminal to start using acme.sh
-[Mon Dec 20 02:49:24 HKT 2021] Installing alias to '/root/.cshrc'
-[Mon Dec 20 02:49:24 HKT 2021] Installing alias to '/root/.tcshrc'
-[Mon Dec 20 02:49:24 HKT 2021] Installing cron job
-13 0 * * * "/root/.acme.sh"/acme.sh --cron --home "/root/.acme.sh" > /dev/null
-[Mon Dec 20 02:49:24 HKT 2021] Good, bash is found, so change the shebang to use bash as preferred.
-[Mon Dec 20 02:49:25 HKT 2021] OK
-[Mon Dec 20 02:49:25 HKT 2021] Install success!
-[Mon Dec 20 02:49:25 HKT 2021] Already uptodate!
-[Mon Dec 20 02:49:25 HKT 2021] Upgrade success!
-[Mon Dec 20 02:49:26 HKT 2021] Changed default CA to: https://acme-v02.api.letsencrypt.org/directory
-0.0.0.0:80
-[Mon Dec 20 02:49:26 HKT 2021] Installing key to: /etc/ssl/stocks.zw963.online/privkey.pem
-[Mon Dec 20 02:49:26 HKT 2021] Installing full chain to: /etc/ssl/stocks.zw963.online/fullchain.pem
-[Mon Dec 20 02:49:26 HKT 2021] Run reload cmd: systemctl restart xray; systemctl restart nginx;
-[Mon Dec 20 02:49:26 HKT 2021] Reload success
-Certificate install to `/etc/ssl/stocks.zw963.online/fullchain.pem', `/etc/ssl/stocks.zw963.online/privkey.pem'
-● xray.service - Xray Service
-   Loaded: loaded (/etc/systemd/system/xray.service; enabled; vendor preset: disabled)
-   Active: active (running) since Mon 2021-12-20 02:49:26 HKT; 45ms ago
-     Docs: https://github.com/xtls
- Main PID: 1672774 (xray)
-    Tasks: 3 (limit: 11971)
-   Memory: 7.5M
-   CGroup: /system.slice/xray.service
-           └─1672774 /usr/local/bin/xray run -config /etc/xray/config.json
-
-Dec 20 02:49:26 zw963.online systemd[1]: xray.service: Succeeded.
-Dec 20 02:49:26 zw963.online systemd[1]: Stopped Xray Service.
-Dec 20 02:49:26 zw963.online xray[1672774]: Xray 1.5.0 (Xray, Penetrates Everything.) Custom (go1.17.2 linux/amd64)
-Dec 20 02:49:26 zw963.online xray[1672774]: A unified platform for anti-censorship.
-Dec 20 02:49:26 zw963.online systemd[1]: Started Xray Service.
-Dec 20 02:49:26 zw963.online xray[1672774]: 2021/12/20 02:49:26 [Info] infra/conf/serial: Reading config: /etc/xray/config.json
-● firewalld.service - firewalld - dynamic firewall daemon
-   Loaded: loaded (/usr/lib/systemd/system/firewalld.service; disabled; vendor preset: enabled)
-   Active: inactive (dead)
-     Docs: man:firewalld(1)
-SELINUX=disabled
-● firewalld.service - firewalld - dynamic firewall daemon
-   Loaded: loaded (/usr/lib/systemd/system/firewalld.service; disabled; vendor preset: enabled)
-   Active: inactive (dead)
-     Docs: man:firewalld(1)
-SELINUX=disabled
-Congratulations, Deploy succssful!
-Please check generated client config file at router/opt/etc/v2ray.json
-
-Please wait copy generated client config into local machine ...
-v2ray.json                                                                                                100% 9279   154.2KB/s   00:00    
 Run ./deploy_router admin@192.168.50.1 to deploy to router.
 Run ./deploy_side_router root@side_router_ip to deploy to side_router.
 
@@ -272,7 +129,7 @@ A success deploy on router should be looking like this.
 
 ### deploy code to side router
 
-![deploy_side_router](/images/deploy_side_router.jpg)
+![deploy_side_router](/images/deploy_side_router.png)
 
 ### Useful command for router
 
