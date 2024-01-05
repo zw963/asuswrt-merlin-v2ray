@@ -1,4 +1,4 @@
-/router/opt/etc/v2ray.json*
+/router/opt/etc/config.json*
 logs/*
 downloaded_binary/*/*.json
 downloaded_binary/linux-amd64/geoip.dat
@@ -11,3 +11,4 @@ downloaded_binary/linux-amd64/apply_iptables_rule.sh
 downloaded_binary/linux-amd64/clean_iptables_rule.sh
 downloaded_binary/linux-amd64/update_geodata.sh
 downloaded_binary/linux-arm*
+downloaded_binary/*.bak

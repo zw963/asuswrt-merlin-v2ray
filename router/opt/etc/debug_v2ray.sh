@@ -19,8 +19,8 @@ function replace_regex () {
     perl_replace "$regexp" "$replace" -0 "$file"
 }
 
-if egrep -qe '"loglevel":\s*".+"' v2ray.json; then
-    replace_regex '"loglevel":\s*".+?"' '"loglevel": "debug"' v2ray.json
+if egrep -qe '"loglevel":\s*".+"' config.json; then
+    replace_regex '"loglevel":\s*".+?"' '"loglevel": "debug"' config.json
 fi
 
 if [ -e /opt/etc/init.d/S22v2ray ]; then
@@ -29,4 +29,4 @@ else
     systemctl stop v2ray
 fi
 
-/opt/sbin/v2ray -config ${v2ray_config-/opt/etc/v2ray.json}
+/opt/sbin/v2ray -config ${v2ray_config-/opt/etc/config.json}

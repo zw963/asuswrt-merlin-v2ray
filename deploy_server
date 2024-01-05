@@ -24,14 +24,17 @@ function postinstall () {
     mkdir -p ./downloaded_binary/linux-amd64/services ./downloaded_binary/${arch}
     echo
     echo 'Please wait copy generated client config into local machine ...'
-    scp  $target:/etc/$service_name/v2ray.json ./downloaded_binary/linux-amd64
+    scp  $target:/etc/$service_name/client_config.json ./downloaded_binary/linux-amd64/config.json
     scp  $target:/usr/local/bin/{geoip-only-cn-private.dat,geoip.dat,geosite.dat,xray,v2ray} ./downloaded_binary/linux-amd64/
     scp  $target:/etc/systemd/system/{v2ray.service,v2ray@.service} ./downloaded_binary/linux-amd64/services/
     cp router/opt/etc/{apply_iptables_rule.sh,clean_iptables_rule.sh,update_geodata.sh} ./downloaded_binary/linux-amd64/
-    cd ./downloaded_binary/linux-amd64/
-    chmod +x apply_iptables_rule.sh clean_iptables_rule.sh update_geodata.sh xray v2ray
 
-    cp ./downloaded_binary/linux-amd64/{geoip-only-cn-private.dat,geoip.dat,geosite.dat,v2ray.json} ./downloaded_binary/${arch}/
+    (
+        cd ./downloaded_binary/linux-amd64/
+        chmod +x apply_iptables_rule.sh clean_iptables_rule.sh update_geodata.sh xray v2ray
+    )
+
+    cp ./downloaded_binary/linux-amd64/{geoip-only-cn-private.dat,geoip.dat,geosite.dat,config.json} ./downloaded_binary/${arch}/
     scp  $target:/tmp/v2ray-clients/{xray,v2ray} ./downloaded_binary/${arch}/
 
     echo "Run [0m[33m./deploy_router admin@router_ip[0m to deploy to router."
@@ -53,6 +56,8 @@ if [ "$use_xtls" ] && grep -qs -e 'set_your_domain_name_here' ${service_name}_se
     exit
 fi
 
+
+ssh $target '[ -e /etc/xray/config.json ] && cp -a /etc/xray/config.json /etc/xray/config.json.old'
 copy xray_server.json /etc/xray/config.json
 copy v2ray_server.json /etc/v2ray/config.json
 copy downloaded_binary/linux-amd64/services/xray.service /etc/systemd/system/xray.service
@@ -141,6 +146,7 @@ mkdir -p /var/log/xray /var/log/v2ray
 # chown nobody:nobody /var/log/xray /var/log/v2ray
 
 if [ "$old_uuid" != NEWUUID ]; then
+    echo "Old uuid $old_uuid exits, use it."
     uuid=$old_uuid
 else
     uuid=$(cat /proc/sys/kernel/random/uuid)
@@ -185,7 +191,7 @@ expose_port $v2ray_port
 expose_port $ss_port
 
 set -u
-cat <<HEREDOC > /etc/$service_name/v2ray.json
+cat <<HEREDOC > /etc/$service_name/client_config.json
 // 本脚本当运行 deploy_server 时自动生成。
 // 本脚本可作为 普通 v2ray 客户端脚本，也可以作为 ASUS 梅林路由器/旁路由 透明代理脚本，
 // 运行 ./deploy_router admin@router.asus.com 部署这个配置文件到路由器。
@@ -248,6 +254,13 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
                 "port": 53,
                 "network": "udp",
                 "outboundTag": "dns-outbound"
+            },
+            {
+                "type": "field",
+                "inboundTag": ["transparent"],
+                "port": 123,
+                "network": "udp",
+                "outboundTag": "direct"
             },
             {
                 // redirect 透明代理必需。
@@ -470,15 +483,14 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
 HEREDOC
 
 if [ -z "$use_xtls" ]; then
-    replace_string '"protocol": "vless",' '"protocol": "vmess",' /etc/$service_name/v2ray.json
-    replace_multiline1 '"encryption": "none",\s*"flow": "xtls-rprx-.*?",' '' /etc/$service_name/v2ray.json
+    replace_string '"protocol": "vless",' '"protocol": "vmess",' /etc/$service_name/client_config.json
+    replace_multiline1 '"encryption": "none",\s*"flow": "xtls-rprx-.*?",' '' /etc/$service_name/client_config.json
     replace_multiline1 '"network": "tcp",\s*"security": "xtls".*?},' '"network": "quic",
                "quicSettings": {
                     "header": {
                         "type": "wechat-video"
                     }
-                },' /etc/$service_name/v2ray.json
+                },' /etc/$service_name/client_config.json
 fi
 
 echo 'Congratulations, Deploy succssful!'
-echo 'Please check generated client config file at router/opt/etc/v2ray.json'

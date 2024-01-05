@@ -11,7 +11,7 @@ For the correct Arch name, check https://github.com/XTLS/Xray-core/releases asse
 Current arch using: ${arch}"
 
 config_folder=./downloaded_binary/${arch}
-config=${config_folder}/v2ray.json
+config=${config_folder}/config.json
 
 if [ ! -f "$config" ];then
     echo "Please create ${config} or generate it use ./deploy_server root@some_ip before deploy to router."
@@ -119,7 +119,7 @@ set +e
 chmod -x /opt/etc/init.d/S22v2ray && sh /opt/etc/init.d/S22v2ray stop
 set -e
 cp $service_name geosite.dat geoip-only-cn-private.dat /opt/sbin/
-cp v2ray.json /opt/etc
+cp config.json /opt/etc
 
 
 cat <<HEREDOC > /opt/etc/init.d/S22v2ray
@@ -127,7 +127,7 @@ cat <<HEREDOC > /opt/etc/init.d/S22v2ray
 
 ENABLED=yes
 PROCS=$service_name
-ARGS="run -config /opt/etc/v2ray.json"
+ARGS="run -config /opt/etc/config.json"
 PREARGS=""
 DESC=\$PROCS
 PATH=/opt/sbin:/opt/bin:/opt/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

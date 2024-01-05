@@ -53,25 +53,31 @@ function replace_multiline1 () {
     perl_replace "$regexp" "$replace" "" "s" -0777 "$file"
 }
 
-# disalbe_proxy 并没有停止 v2ray 服务.
-# 因为即使关闭透明代理，仍可以通过浏览器插件使用 v2ray 的 socks 代理或 http 代理服务。
+config=${v2ray_config-/opt/etc/config.json}
 
-v2ray_config=${v2ray_config-/opt/etc/v2ray.json}
+if cat $config |grep -qs '"protocol": "vless"'; then
+    service_name=xray
+else
+    service_name=v2ray
+fi
+
 
 function disable_proxy () {
     echo '[0m[0;33m => Disabling proxy ...[0m'
 
-    if [ -e /opt/etc/init.d/S22v2ray ]; then
-        chmod -x /opt/etc/init.d/S22v2ray && sh /opt/etc/init.d/S22v2ray stop
+    if [ -e /opt/etc/init.d/S22${service_name} ]; then
+        chmod -x /opt/etc/init.d/S22${service_name} && sh /opt/etc/init.d/S22${service_name} stop
+        # disalbe_proxy 并没有停止 v2ray 服务.
+        # 因为即使关闭透明代理，仍可以通过浏览器插件使用 v2ray 的 socks 代理或 http 代理服务。
         # else
-        #     systemctl disable v2ray && systemctl stop v2ray
+        #     systemctl disable ${service_name} && systemctl stop ${service_name}
     fi
     /opt/etc/clean_iptables_rule.sh && chmod -x /opt/etc/apply_iptables_rule.sh
 
     if which dnsmasq &>/dev/null; then
         dnsmasq_dir=/opt/etc/dnsmasq.d
 
-        [ -d "$dnsmasq_dir" ] && rm -f $dnsmasq_dir/v2ray.conf
+        [ -d "$dnsmasq_dir" ] && rm -f $dnsmasq_dir/${service_name}.conf
 
         chmod +x /opt/etc/restart_dnsmasq.sh && /opt/etc/restart_dnsmasq.sh
     fi
@@ -88,39 +94,39 @@ function enable_proxy () {
     fi
 
     if modprobe xt_TPROXY &>/dev/null; then
-        sed -i 's#"tproxy": ".*"#"tproxy": "tproxy"#' $v2ray_config
+        sed -i 's#"tproxy": ".*"#"tproxy": "tproxy"#' $config
 
         if [ -e /opt/etc/use_fakedns ]; then
             echo 'Apply fakeDNS config ...'
-            replace_multiline1 '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["fakedns"]' $v2ray_config
-            if ! match_multiline '"servers":\s*\[.*?"fakedns",.*?"8.8.4.4",' "$(cat $v2ray_config)"; then
-                replace_multiline1 '("servers":\s*\[)(.*?)(\s*)"8.8.4.4",' '$1$3"fakedns",$2$3"8.8.4.4",' $v2ray_config
+            replace_multiline1 '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["fakedns"]' $config
+            if ! match_multiline '"servers":\s*\[.*?"fakedns",.*?"8.8.4.4",' "$(cat $config)"; then
+                replace_multiline1 '("servers":\s*\[)(.*?)(\s*)"8.8.4.4",' '$1$3"fakedns",$2$3"8.8.4.4",' $config
             fi
         else
             echo 'Apply TProxy config ...'
-            replace_multiline1 '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["http", "tls"]' $v2ray_config
-            replace_multiline1 '("servers":\s*\[).*?(\s*)"8.8.4.4",' '$1$2"8.8.4.4",' $v2ray_config
+            replace_multiline1 '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["http", "tls"]' $config
+            replace_multiline1 '("servers":\s*\[).*?(\s*)"8.8.4.4",' '$1$2"8.8.4.4",' $config
         fi
     else
         echo 'Not support tproxy, exit ...'
     fi
 
-    if grep '"loglevel":\s*"debug"' $v2ray_config; then
-        replace_multiline '"loglevel":\s*"debug"' '"loglevel": "warning"' $v2ray_config
+    if grep '"loglevel":\s*"debug"' $config; then
+        replace_multiline '"loglevel":\s*"debug"' '"loglevel": "warning"' $config
     fi
 
     chmod +x /opt/etc/apply_iptables_rule.sh && /opt/etc/apply_iptables_rule.sh
 
-    if [ -e /opt/etc/init.d/S22v2ray ]; then
-        chmod +x /opt/etc/init.d/S22v2ray && sh /opt/etc/init.d/S22v2ray start
-        # else
-        #     systemctl start v2ray && systemctl enable v2ray
+    if [ -e /opt/etc/init.d/S22${service_name} ]; then
+        chmod +x /opt/etc/init.d/S22${service_name} && sh /opt/etc/init.d/S22${service_name} start
+    else
+        systemctl start ${service_name} && systemctl enable ${service_name}
     fi
 
     echo '[0m[0;33m => Proxy is enabled.[0m'
 }
 
-echo "Using config file ${v2ray_config}."
+echo "Using config file ${config}."
 
 if [ "$1" == 'disable' ]; then
     disable_proxy
