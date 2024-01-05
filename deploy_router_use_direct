@@ -162,20 +162,14 @@ chmod +x apply_iptables_rule_redirect.sh \
 
 # 每隔 3 分钟检测下所有的服务是否运行, 以及 iptables rule 是否失效.
 add_service wan-start 'cru a run-services "*/3 * * * * /jffs/scripts/services-start"'
-add_service wan-start 'cru a run-iptables "*/3 * * * * /opt/etc/apply_iptables_rule_redirect.sh"'
+add_service wan-start 'cru a run-iptables "*/1 * * * * /opt/etc/apply_iptables_rule_redirect.sh"'
 # 每个周日的 5: 25 升级一次 geosites 数据.
 add_service wan-start 'cru a update_geodata "25 5 * * 0 /opt/etc/update_geodata.sh"'
 /jffs/scripts/wan-start
 
-# Because newest asus merlin introduce AMTM, please enable swap file there if need it.
-# 打开swap
-# echo 'Enabling swap'
-# /opt/etc/enable_swap.sh
-# add_service post-mount '/opt/etc/enable_swap.sh'
-
 # 如果 DHCP 重新分配 IP 地址时, 会清除 iptables rule, 此时重新应用 iptables
 add_service dhcpc-event '/opt/etc/apply_iptables_rule_redirect.sh'
 
-add_service services-start '[ -f /tmp/restart_dnsmasq_was_run_at ] || /opt/etc/restart_dnsmasq'
+add_service services-start '[ -f /tmp/restart_dnsmasq_was_run_at ] || /opt/etc/restart_dnsmasq.sh'
 
-/opt/etc/patch_router && echo "Congratulations, [0m[33mDeploy succssful[0m!"
+/opt/etc/restart_dnsmasq.sh && echo "Congratulations, [0m[33mDeploy succssful[0m!"

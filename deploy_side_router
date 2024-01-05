@@ -2,19 +2,32 @@
 
 self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.7/deploy_start.sh)" && eval "$self"
 
-export target=$1
-export arch=${router_arch-linux-amd64}
+export_variable target=$1
+export_variable arch=${router_arch-linux-amd64}
 
 echo "Set \$router_arch env to e.g. \`linux-arm32-v5' for deploy Xray into ASUS AC5300 router.
 For the correct Arch name, check https://github.com/XTLS/Xray-core/releases assets.
 Current arch using: ${arch}"
 
-config=./downloaded_binary/v2ray.json
+config_folder=./downloaded_binary/${arch}
+config=${config_folder}/v2ray.json
 
-if [ ! -f "$config" ]; then
-    echo "Please create ${config} or generate it use ./deploy_server before deploy to side router."
-    exit
+if [ ! -f "$config" ];then
+    echo "Please create ${config} or generate it use ./deploy_server root@some_ip before deploy to side router."
+    exit 1
 fi
+
+assets=(geoip.dat geosite.dat geoip-only-cn-private.dat v2ray xray)
+
+for i in "${assets[@]}"; do
+    if [ ! -f "${config_folder}/$i" ];then
+        echo "${config_folder}/$i is missing, predownload it use ./deploy_server root@some_ip before deploy to router."
+        exit 1
+    fi
+done
+
+echo 'Copy downloaded binary to router ...'
+copy $config_folder downloaded_binary
 
 if cat $config |grep -qs '"protocol": "vless"'; then
     service_name=xray
@@ -23,12 +36,12 @@ else
 fi
 
 if [ "$use_xtls" ]; then
-    export service_name=xray
+    export_variable service_name=xray
 else
-    export service_name=${service_name}
+    export_variable service_name=${service_name}
 fi
 
-echo "Set \$use_xtls=true if deploy Xray instead of V2ray.
+echo "Set \$use_xtls=true if prefer deploy Xray instead of V2ray.
 Current auto-detect: ${service_name}.
 "
 
@@ -46,7 +59,6 @@ function postinstall () {
 }
 
 ssh "$*" "sudo mkdir -p /opt/etc /opt/sbin /var/log/v2ray"
-copy "$config" /opt/etc/
 copy router/opt/etc/apply_iptables_rule.sh /opt/etc/
 copy router/opt/etc/clean_iptables_rule.sh /opt/etc
 copy router/opt/etc/update_geodata.sh /opt/etc
@@ -56,14 +68,6 @@ copy router/opt/etc/iptables-rule.service /etc/systemd/system
 copy router/opt/etc/check_google_use_proxy.sh /opt/etc
 copy router/opt/etc/check_google_use_socks5.sh /opt/etc
 copy router/opt/etc/debug_v2ray.sh /opt/etc
-
-if [ -d downloaded_binary/${arch} ]; then
-    echo 'Copy downloaded binary to router ...'
-    copy downloaded_binary/${arch} downloaded_binary
-else
-    echo "Please run \`use_tls=true ./deploy_server root@some_ip' first to copy binary into downloaded_binary, then retry."
-    exit 1
-fi
 
 deploy_start
 
@@ -109,8 +113,13 @@ if ! ./$service_name version &>/dev/null; then
     exit
 fi
 
-set +e; systemctl stop v2ray; set -e
-cp $service geosite.dat geoip-only-cn-private.dat /opt/sbin/
+set +e
+systemctl stop v2ray
+set -e
+
+cp $service_name geosite.dat geoip-only-cn-private.dat /opt/sbin/
+cp v2ray.json /opt/etc
+
 cp systemd/system/*.service /etc/systemd/system
 replace_regex1 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
 # Added by user
@@ -158,6 +167,7 @@ set +e
 systemctl disable firewalld &>/dev/null
 systemctl stop firewalld &>/dev/null
 set -e
+
 systemctl daemon-reload && systemctl start v2ray && systemctl enable v2ray && systemctl status v2ray
 systemctl start iptables-rule &&  systemctl enable iptables-rule
 cp /opt/etc/update_geodata.sh /etc/cron.weekly/
