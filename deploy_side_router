@@ -1,15 +1,36 @@
 #!/bin/bash
 
-self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.3/deploy_start.sh)" && eval "$self"
+self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.7/deploy_start.sh)" && eval "$self"
 
 export target=$1
+export arch=${router_arch-linux-amd64}
 
-config=./router/opt/etc/v2ray.json
+echo "Set \$router_arch env to e.g. \`linux-arm32-v5' for deploy Xray into ASUS AC5300 router.
+For the correct Arch name, check https://github.com/XTLS/Xray-core/releases assets.
+Current arch using: ${arch}"
 
-if [ ! -e "$config" ]; then
+config=./downloaded_binary/v2ray.json
+
+if [ ! -f "$config" ]; then
     echo "Please create ${config} or generate it use ./deploy_server before deploy to side router."
     exit
 fi
+
+if cat $config |grep -qs '"protocol": "vless"'; then
+    service_name=xray
+else
+    service_name=v2ray
+fi
+
+if [ "$use_xtls" ]; then
+    export service_name=xray
+else
+    export service_name=${service_name}
+fi
+
+echo "Set \$use_xtls=true if deploy Xray instead of V2ray.
+Current auto-detect: ${service_name}.
+"
 
 function postinstall () {
     set -u
@@ -36,12 +57,10 @@ copy router/opt/etc/check_google_use_proxy.sh /opt/etc
 copy router/opt/etc/check_google_use_socks5.sh /opt/etc
 copy router/opt/etc/debug_v2ray.sh /opt/etc
 
-if [ -d downloaded_binary ]; then
+if [ -d downloaded_binary/${arch} ]; then
     echo 'Copy downloaded binary to router ...'
-    mkdir -p downloaded_binary
-    scp -r downloaded_binary/amd64 $target:download_binary
+    copy downloaded_binary/${arch} downloaded_binary
 else
-    ssh "$*" "rm -rf downloaded_binary"
     echo "Please run \`use_tls=true ./deploy_server root@some_ip' first to copy binary into downloaded_binary, then retry."
     exit 1
 fi
@@ -85,25 +104,25 @@ set -eu
 
 cd downloaded_binary
 
-if ./xray -version; then
-    set +e; systemctl stop v2ray; set -e
-    cp xray geosite.dat geoip-only-cn-private.dat /opt/sbin/
-    cp systemd/system/*.service /etc/systemd/system
-    replace_regex1 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
+if ! ./$service_name version &>/dev/null; then
+    echo "Invalid $service version/arch supported by current side router, please download correct version."
+    exit
+fi
+
+set +e; systemctl stop v2ray; set -e
+cp $service geosite.dat geoip-only-cn-private.dat /opt/sbin/
+cp systemd/system/*.service /etc/systemd/system
+replace_regex1 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
 # Added by user
 LimitNPROC=500
 LimitNOFILE=1000000' /etc/systemd/system/v2ray.service
-    replace_regex1 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
+replace_regex1 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
 # Added by user
 LimitNPROC=500
 LimitNOFILE=1000000' /etc/systemd/system/v2ray@.service
-    replace_string1 '/usr/local/bin/v2ray -config /usr/local/etc/v2ray/config.json' '/opt/sbin/xray run -config /opt/etc/v2ray.json' /etc/systemd/system/v2ray.service
-    replace_string1 '/usr/local/bin/v2ray -config /usr/local/etc/v2ray/%i.json' '/opt/sbin/xray run -config /opt/etc/%i.json' /etc/systemd/system/v2ray@.service
-    systemctl daemon-reload
-else
-    echo 'Not valid xray version is supported by current router, please download correct version.'
-    exit
-fi
+replace_string1 '/usr/local/bin/v2ray -config /usr/local/etc/v2ray/config.json' '/opt/sbin/xray run -config /opt/etc/v2ray.json' /etc/systemd/system/v2ray.service
+replace_string1 '/usr/local/bin/v2ray -config /usr/local/etc/v2ray/%i.json' '/opt/sbin/xray run -config /opt/etc/%i.json' /etc/systemd/system/v2ray@.service
+systemctl daemon-reload
 
 echo 'xray is installed'
 
@@ -123,12 +142,8 @@ chmod +x apply_iptables_rule.sh \
       check_google_use_socks5.sh \
       debug_v2ray.sh
 
-# 旁路由直接在 53 端口监听
+# 默认配置文件适用于路由器配合 dnsmasq 一起使用，使用旁路由时，直接在 53 端口监听即可。
 replace_string '65053' '53' /opt/etc/v2ray.json
-
-# 下面的 iptables 在旁路由模式下，无需设置。
-replace_string 'iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN' 'iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp -j RETURN' /opt/etc/apply_iptables_rule.sh
-replace_regex 'iptables -t mangle -A V2RAY_UDP -p udp -j TPROXY --tproxy-mark 1 --on-port \$local_v2ray_port' '' /opt/etc/apply_iptables_rule.sh
 
 /opt/etc/clean_iptables_rule.sh && chmod -x /opt/etc/apply_iptables_rule.sh
 chmod +x /opt/etc/apply_iptables_rule.sh && /opt/etc/apply_iptables_rule.sh

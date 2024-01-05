@@ -30,7 +30,7 @@ function perl_replace() {
         globally=' globally'
     fi
 
-    perl -i -ne "s$regexp$replace${replace_all_matched}${match_newline}; print \$_; unless ($& eq \"\") {print STDERR \"\`\033[0;33m$&\033[0m' was replaced with \`\033[0;33m${escaped_replace}\033[0m'${globally} for \`[0m[0;34m$6[0m'!\n\"};" "$5" "$6"
+    perl -i -ne "s$regexp$replace${replace_all_matched}${match_newline}; print \$_; unless ($& eq \"\") {print STDERR \"\`\033[0;33m$&\033[0m' was replaced with \`\033[0;34m${escaped_replace}\033[0m'${globally} for \`\033[0;33m$6\033[0m'!\n\"};" "$5" "$6"
 }
 
 # 为了支持多行匹配，使用 perl 正则, 比 sed 好用一百倍！
@@ -65,33 +65,6 @@ function clean_dnsmasq_config () {
     fi
 }
 
-function enable_dnsmasq_config () {
-    if ! which dnsmasq &>/dev/null; then
-        echo -e "[0m[1;31mERROR:[0m Transparent proxy based on redirect mode need dnsmasq to serve as LAN DNS server!"
-        exit 1
-    fi
-
-    echo -n 'Apply dnsmasq config ... '
-    mkdir -p "$dnsmasq_dir"
-
-    # 为默认的 /etc/dnsmasq.conf 新增配置.
-    if ! grep -qs "^conf-dir=$dnsmasq_dir/,\*\.conf$" /etc/dnsmasq.conf; then
-        echo "conf-dir=$dnsmasq_dir/,*.conf" >> /etc/dnsmasq.conf
-    fi
-
-    echo 'server=/#/127.0.0.1#65053' > $dnsmasq_dir/v2ray.conf
-
-    if [ "$1" == 'with_log' ]; then
-        # 开启日志.
-        if ! grep -qs "^log-queries$" /etc/dnsmasq.conf; then
-            echo 'log-queries' >> $dnsmasq_dir/v2ray.conf
-            echo 'log-facility=/tmp/dnsmasq.log' >> $dnsmasq_dir/v2ray.conf
-        fi
-    fi
-
-    sed -i 's#"tproxy": ".*"#"tproxy": "redirect"#' $v2ray_config
-}
-
 function disable_proxy () {
     echo '[0m[0;33m => Disabling proxy ...[0m'
 
@@ -114,7 +87,7 @@ function enable_proxy () {
     echo '[0m[0;33m => Enabling proxy ...[0m'
 
     if [ -e /opt/etc/use_redirect_proxy ]; then
-        enable_dnsmasq_config
+        sed -i 's#"tproxy": ".*"#"tproxy": "redirect"#' $v2ray_config
     else
         if modprobe xt_TPROXY &>/dev/null; then
             sed -i 's#"tproxy": ".*"#"tproxy": "tproxy"#' $v2ray_config
@@ -134,7 +107,7 @@ function enable_proxy () {
                 echo -e "[0m[1;31mERROR:[0m Enable fakeDNS need router support TProxy!"
                 exit 1
             else
-                enable_dnsmasq_config
+                sed -i 's#"tproxy": ".*"#"tproxy": "redirect"#' $v2ray_config
             fi
         fi
     fi

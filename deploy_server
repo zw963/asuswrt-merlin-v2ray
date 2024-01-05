@@ -1,31 +1,40 @@
 #!/bin/sh
 
-self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.6/deploy_start.sh)" && eval "$self"
+self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.7/deploy_start.sh)" && eval "$self"
 
-export target=$1
-export use_xtls="$use_xtls"
-export old_uuid=$(ssh $target cat /etc/xray/config.json 2>/dev/null |grep '"flow": "xtls-rprx' -B3 |grep '"id":' |cut -d: -f2 |cut -d'"' -f2)
+export_variable target=$1
+export_variable use_xtls="${use_xtls-true}"
+export_variable old_uuid=$(ssh $target cat /etc/xray/config.json 2>/dev/null |grep '"flow": "xtls-rprx' -B3 |grep '"id":' |cut -d: -f2 |cut -d'"' -f2)
+export_variable arch=${router_arch-linux-arm32-v5}
 
-if [ "$use_xtls" ]; then
-    export service_name=xray
-    export another_service_name=v2ray
+echo "Set \$router_arch env to e.g. \`linux-arm32-v5/' if you want deploy to an asuswrt merlin AC5300 router.
+For the correct Arch name, check https://github.com/XTLS/Xray-core/releases assets.
+The default arch will assume server and side router use linux-amd64, and router using  ${arch}."
+
+if [ "$use_xtls" == "true" ]; then
+    export_variable service_name=xray
+    export_variable another_service_name=v2ray
 else
-    export service_name=v2ray
-    export another_service_name=xray
+    export_variable service_name=v2ray
+    export_variable another_service_name=xray
 fi
 
 function postinstall () {
     set -u
-    mkdir -p ./downloaded_binary/amd64
+    mkdir -p ./downloaded_binary/linux-amd64/services ./downloaded_binary/${arch}
     echo
     echo 'Please wait copy generated client config into local machine ...'
-    scp $target:/etc/$service_name/v2ray.json ./downloaded_binary/
-    scp $target:/usr/local/bin/{geoip-only-cn-private.dat,geoip.dat,geosite.dat,v2ray,xray} ./downloaded_binary/amd64/
-    scp $target:/etc/systemd/system/{v2ray.service,v2ray@.service} ./downloaded_binary/amd64/services/
-    cp router/opt/etc/{apply_iptables_rule.sh,clean_iptables_rule.sh,update_geodata.sh} ./downloaded_binary/amd64/
-    cd ./downloaded_binary/amd64/
+    scp  $target:/etc/$service_name/v2ray.json ./downloaded_binary/linux-amd64
+    scp  $target:/usr/local/bin/{geoip-only-cn-private.dat,geoip.dat,geosite.dat,xray,v2ray} ./downloaded_binary/linux-amd64/
+    scp  $target:/etc/systemd/system/{v2ray.service,v2ray@.service} ./downloaded_binary/linux-amd64/services/
+    cp router/opt/etc/{apply_iptables_rule.sh,clean_iptables_rule.sh,update_geodata.sh} ./downloaded_binary/linux-amd64/
+    cd ./downloaded_binary/linux-amd64/
     chmod +x apply_iptables_rule.sh clean_iptables_rule.sh update_geodata.sh xray v2ray
-    echo "Run [0m[33m./deploy_router admin@192.168.50.1[0m to deploy to router."
+
+    cp ./downloaded_binary/linux-amd64/{geoip-only-cn-private.dat,geoip.dat,geosite.dat,v2ray.json} ./downloaded_binary/${arch}/
+    scp  $target:/tmp/v2ray-clients/{xray,v2ray} ./downloaded_binary/${arch}/
+
+    echo "Run [0m[33m./deploy_router admin@router_ip[0m to deploy to router."
     echo "Run [0m[33m./deploy_side_router root@side_router_ip[0m to deploy to side_router."
 }
 
@@ -46,8 +55,8 @@ fi
 
 copy xray_server.json /etc/xray/config.json
 copy v2ray_server.json /etc/v2ray/config.json
-copy downloaded_binary/amd64/services/xray.service /etc/systemd/system/xray.service
-copy downloaded_binary/amd64/services/xray@.service /etc/systemd/system/xray@.service
+copy downloaded_binary/linux-amd64/services/xray.service /etc/systemd/system/xray.service
+copy downloaded_binary/linux-amd64/services/xray@.service /etc/systemd/system/xray@.service
 
 deploy_start
 
@@ -73,30 +82,49 @@ fi
 
 xray_version=$(github_latest_release XTLS/Xray-core)
 v2ray_version=$(github_latest_release v2fly/v2ray-core)
-arch=linux-64
 
 set -e
 
-download_and_extract https://github.com/XTLS/Xray-core/releases/download/${xray_version}/Xray-${arch}.zip Xray-${xray_version}
-cd Xray-${xray_version} && chmod +x xray
+(
+    download_and_extract https://github.com/XTLS/Xray-core/releases/download/${xray_version}/Xray-linux-64.zip Xray-${xray_version}-linux-64
 
-if ! ./xray --version &>/dev/null; then
-    echo 'Invalid xray version, please check if download correct version.'
-    exit
-fi
+    cd Xray-${xray_version}-linux-64 && chmod +x xray
 
-cp xray /usr/local/bin
+    if ! ./xray version &>/dev/null; then
+        echo 'Invalid xray version/arch, please download correct version.'
+        exit
+    fi
 
-download_and_extract https://github.com/v2fly/v2ray-core/releases/download/${v2ray_version}/v2ray-${arch}.zip v2ray-${v2ray_version}
-cd v2ray-${v2ray_version} && chmod +x v2ray
+    cp xray *.dat /usr/local/bin
+)
 
-if ! ./v2ray version &>/dev/null; then
-    echo 'Invalid v2ray version, please check if download correct version.'
-    exit
-fi
+(
+    download_and_extract https://github.com/XTLS/Xray-core/releases/download/${xray_version}/Xray-${arch}.zip Xray-${xray_version}-${arch}
 
-cp v2ray *.dat /usr/local/bin &&
-    cp systemd/system/*.service /etc/systemd/system
+    mkdir -p /tmp/v2ray-clients
+    cd Xray-${xray_version}-${arch} && cp xray *.dat /tmp/v2ray-clients
+)
+
+(
+    download_and_extract https://github.com/v2fly/v2ray-core/releases/download/${v2ray_version}/v2ray-linux-64.zip v2ray-${v2ray_version}-linux-64
+
+    cd v2ray-${v2ray_version}-linux-64 && chmod +x v2ray
+
+    if ! ./v2ray version &>/dev/null; then
+        echo 'Invalid v2ray version/arch, please download correct version.'
+        exit
+    fi
+
+    cp v2ray *.dat /usr/local/bin &&
+        cp systemd/system/*.service /etc/systemd/system
+)
+
+(
+    download_and_extract https://github.com/v2fly/v2ray-core/releases/download/${v2ray_version}/v2ray-${arch}.zip v2ray-${v2ray_version}-${arch}
+
+    mkdir -p /tmp/v2ray-clients
+    cd v2ray-${v2ray_version}-${arch} && cp v2ray *.dat /tmp/v2ray-clients
+)
 
 replace_regex 'RestartPreventExitStatus=23' 'RestartPreventExitStatus=23
 # Added by user
@@ -110,7 +138,7 @@ replace_regex '/usr/local/etc/v2ray/config.json' '/etc/v2ray/config.json' /etc/s
 replace_regex '/usr/local/etc/v2ray/%i.json' '/etc/v2ray/%i.json' /etc/systemd/system/v2ray@.service
 
 mkdir -p /var/log/xray /var/log/v2ray
-chown nobody:nobody /var/log/xray /var/log/v2ray
+# chown nobody:nobody /var/log/xray /var/log/v2ray
 
 if [ "$old_uuid" != NEWUUID ]; then
     uuid=$old_uuid
@@ -124,12 +152,9 @@ replace_string 'NEWUUID' "${uuid}" /etc/v2ray/config.json
 
 # replace_string 'QUIC_KEY' "${quic_key}" /etc/xray/config.json
 
-if [ "$new_ss_pwd" != "0" ]; then
-    ss_password=$(openssl rand -base64 32)
-
-    replace_string 'SSPASS' "${ss_password}" /etc/xray/config.json
-    replace_string 'SSPASS' "${ss_password}" /etc/v2ray/config.json
-fi
+ss_password=$(openssl rand -base64 32)
+replace_string 'SSPASS' "${ss_password}" /etc/xray/config.json
+replace_string 'SSPASS' "${ss_password}" /etc/v2ray/config.json
 
 config_sysctl_for_proxy
 
@@ -366,8 +391,8 @@ cat <<HEREDOC > /etc/$service_name/v2ray.json
                 ]
             },
             "streamSettings": {
-               "network": "tcp",
-               "security": "tls", // 需要使用 XTLS
+                "network": "tcp",
+                "security": "tls", // 需要使用 XTLS
                 "tlsSettings": {
                     "serverName": "$domain_name" // 换成你的域名
                 },

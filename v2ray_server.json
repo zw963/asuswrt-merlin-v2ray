@@ -5,9 +5,7 @@
         "loglevel": "warning"
     },
     "dns": {
-        "servers": [
-            "https+local://dns.google/dns-query"
-        ]
+         "servers": ["https+local://dns.google/dns-query"]
     },
     "inbounds": [
         {
@@ -34,7 +32,7 @@
             "port": 22335, // 监听端口
             "settings": {
                 "method": "chacha20-ietf-poly1305",
-                "password": "change_yours_password_here"
+                "password": "SSPASS"
             }
         }
     ],
@@ -58,9 +56,7 @@
         "rules": [
             {
                 "type": "field",
-                "ip": [
-                    "ext:geoip-only-cn-private.dat:private"
-                ],
+                "ip": ["ext:geoip-only-cn-private.dat:private"],
                 "outboundTag": "block"
             }
         ]

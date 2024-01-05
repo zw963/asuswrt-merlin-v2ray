@@ -1,15 +1,50 @@
 #!/bin/bash
 
-self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.3/deploy_start.sh)" && eval "$self"
+self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.7/deploy_start.sh)" && eval "$self"
+# self="$(\cat /home/common/Project/deployment_bash/deploy_start.sh)" && eval "$self"
 
-export target=$1
+export_variable target=$1
+export_variable arch=${router_arch-linux-arm32-v5}
 
-config=./router/opt/etc/v2ray.json
+echo "Set \$router_arch env to e.g. \`linux-arm32-v5' for deploy Xray into ASUS AC5300 router.
+For the correct Arch name, check https://github.com/XTLS/Xray-core/releases assets.
+Current arch using: ${arch}"
 
-if [ ! -e "$config" ];then
-    echo "Please create ${config} or generate it use ./deploy_server before deploy to router."
-    exit
+config_folder=./downloaded_binary/${arch}
+config=${config_folder}/v2ray.json
+
+if [ ! -f "$config" ];then
+    echo "Please create ${config} or generate it use ./deploy_server root@some_ip before deploy to router."
+    exit 1
 fi
+
+assets=(geoip.dat geosite.dat geoip-only-cn-private.dat v2ray xray)
+
+for i in "${assets[@]}"; do
+    if [ ! -f "${config_folder}/$i" ];then
+        echo "${config_folder}/$i is missing, predownload it use ./deploy_server root@some_ip before deploy to router."
+        exit 1
+    fi
+done
+
+echo 'Copy downloaded binary to router ...'
+copy $config_folder downloaded_binary
+
+if cat $config |grep -qs '"protocol": "vless"'; then
+    service_name=xray
+else
+    service_name=v2ray
+fi
+
+if [ "$use_xtls" ]; then
+    export_variable service_name=xray
+else
+    export_variable service_name=${service_name}
+fi
+
+echo "Set \$use_xtls=true if prefer deploy Xray instead of V2ray.
+Current auto-detect: ${service_name}.
+"
 
 function postinstall () {
     set -u
@@ -23,10 +58,9 @@ function postinstall () {
         echo 'visit google failed, something was wrong!'
     fi
 }
-copy "$config" /opt/etc/
+
 copy router/opt/etc/apply_iptables_rule.sh /opt/etc/
 copy router/opt/etc/clean_iptables_rule.sh /opt/etc
-copy router/opt/etc/enable_swap.sh /opt/etc
 copy router/opt/etc/update_geodata.sh /opt/etc
 copy router/opt/etc/restart_dnsmasq.sh /opt/etc
 copy router/opt/etc/toggle_proxy.sh /opt/etc
@@ -34,16 +68,6 @@ copy router/opt/etc/patch_router /opt/etc
 copy router/opt/etc/check_google_use_proxy.sh /opt/etc
 copy router/opt/etc/check_google_use_socks5.sh /opt/etc
 copy router/opt/etc/debug_v2ray.sh /opt/etc
-
-if [ -d downloaded_binary ]; then
-    echo 'Copy downloaded binary to router ...'
-    mkdir -p downloaded_binary
-    scp -r downloaded_binary/arm32 $target:download_binary
-else
-    ssh "$*" "rm -rf downloaded_binary"
-    echo "Please run \`use_tls=true ./deploy_server root@some_ip' first to copy binary into downloaded_binary, then retry."
-    exit 1
-fi
 
 deploy_start
 
@@ -88,32 +112,32 @@ fi
 
 cd downloaded_binary
 
-if ./v2ray -version; then
-    set +e
-    chmod -x /opt/etc/init.d/S22v2ray && sh /opt/etc/init.d/S22v2ray stop
-    set -e
-    cp v2ray v2ctl geosite.dat geoip-only-cn-private.dat /opt/sbin/
-else
-    echo 'Not valid v2ray version is supported by current router, please download correct version.'
+if ! ./$service_name version &>/dev/null; then
+    echo "Invalid $service version/arch supported by current router, please download correct version."
     exit
 fi
 
-cat <<'HEREDOC' > /opt/etc/init.d/S22v2ray
+set +e
+chmod -x /opt/etc/init.d/S22v2ray && sh /opt/etc/init.d/S22v2ray stop
+set -e
+cp $service_name geosite.dat geoip-only-cn-private.dat /opt/sbin/
+cp v2ray.json /opt/etc
+
+
+cat <<HEREDOC > /opt/etc/init.d/S22v2ray
 #!/bin/sh
 
 ENABLED=yes
-PROCS=v2ray
-ARGS="-config /opt/etc/v2ray.json"
+PROCS=$service_name
+ARGS="run -config /opt/etc/v2ray.json"
 PREARGS=""
-DESC=$PROCS
+DESC=\$PROCS
 PATH=/opt/sbin:/opt/bin:/opt/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-[ -z "$(which $PROCS)" ] && exit 0
+[ -z "\$(which \$PROCS)" ] && exit 0
 
 . /opt/etc/init.d/rc.func
 HEREDOC
-
-echo 'v2ray was installed.'
 
 # ----------------------------------------------------
 #
@@ -140,22 +164,22 @@ chmod +x apply_iptables_rule.sh \
 #
 # ---------------------------------------------------
 
-# 每隔 3 分钟检测下所有的服务是否运行, 以及 iptables rule 是否失效.
-add_service wan-start 'cru a run-services "*/3 * * * * /jffs/scripts/services-start"'
-add_service wan-start 'cru a run-iptables "*/3 * * * * /opt/etc/apply_iptables_rule.sh"'
-# 每个周日的 5: 25 升级一次 geosites 数据.
-add_service wan-start 'cru a update_geodata "25 5 * * 0 /opt/etc/update_geodata.sh"'
-/jffs/scripts/wan-start
+# # 每隔 3 分钟检测下所有的服务是否运行, 以及 iptables rule 是否失效.
+# add_service wan-start 'cru a run-services "*/3 * * * * /jffs/scripts/services-start"'
+# add_service wan-start 'cru a run-iptables "*/3 * * * * /opt/etc/apply_iptables_rule.sh"'
+# # 每个周日的 5: 25 升级一次 geosites 数据.
+# add_service wan-start 'cru a update_geodata "25 5 * * 0 /opt/etc/update_geodata.sh"'
+# /jffs/scripts/wan-start
 
-# Because newest asus merlin introduce AMTM, please enable swap file there if need it.
-# 打开swap
-# echo 'Enabling swap'
-# /opt/etc/enable_swap.sh
-# add_service post-mount '/opt/etc/enable_swap.sh'
+# # Because newest asus merlin introduce AMTM, please enable swap file there if need it.
+# # 打开swap
+# # echo 'Enabling swap'
+# # /opt/etc/enable_swap.sh
+# # add_service post-mount '/opt/etc/enable_swap.sh'
 
-# 如果 DHCP 重新分配 IP 地址时, 会清除 iptables rule, 此时重新应用 iptables
-add_service dhcpc-event '/opt/etc/apply_iptables_rule.sh'
+# # 如果 DHCP 重新分配 IP 地址时, 会清除 iptables rule, 此时重新应用 iptables
+# add_service dhcpc-event '/opt/etc/apply_iptables_rule.sh'
 
-add_service services-start '[ -f /tmp/patch_router_was_run_at ] || /opt/etc/patch_router'
+# add_service services-start '[ -f /tmp/patch_router_was_run_at ] || /opt/etc/patch_router'
 
 /opt/etc/patch_router && echo "Congratulations, [0m[33mDeploy succssful[0m!"
