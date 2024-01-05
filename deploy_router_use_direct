@@ -1,7 +1,7 @@
 #!/bin/bash
 
-self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.7/deploy_start.sh)" && eval "$self"
-# self="$(\cat /home/common/Project/deployment_bash/deploy_start.sh)" && eval "$self"
+# self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.7/deploy_start.sh)" && eval "$self"
+self="$(\cat /home/common/Project/deployment_bash/deploy_start.sh)" && eval "$self"
 
 export_variable target=$1
 export_variable arch=${router_arch-linux-arm32-v5}
@@ -59,13 +59,12 @@ function postinstall () {
     fi
 }
 
-copy router/opt/etc/apply_iptables_rule.sh /opt/etc/
+copy router/opt/etc/apply_iptables_rule_redirect.sh /opt/etc/
 copy router/opt/etc/clean_iptables_rule.sh /opt/etc
 copy router/opt/etc/update_geodata.sh /opt/etc
+copy router/opt/etc/restart_dnsmasq.sh /opt/etc
 copy router/opt/etc/toggle_proxy.sh /opt/etc
-copy router/opt/etc/patch_router /opt/etc
 copy router/opt/etc/check_google_use_proxy.sh /opt/etc
-copy router/opt/etc/check_google_use_socks5.sh /opt/etc
 copy router/opt/etc/debug_v2ray.sh /opt/etc
 
 deploy_start
@@ -145,15 +144,14 @@ HEREDOC
 # ---------------------------------------------------
 
 cd /opt/etc
-chmod +x apply_iptables_rule.sh \
+chmod +x apply_iptables_rule_redirect.sh \
       clean_iptables_rule.sh \
       enable_swap.sh \
       update_geodata.sh \
+      restart_dnsmasq.sh \
       toggle_proxy.sh \
-      patch_router \
       /jffs/scripts/services-start \
       check_google_use_proxy.sh \
-      check_google_use_socks5.sh \
       debug_v2ray.sh
 
 # ----------------------------------------------------
@@ -162,22 +160,22 @@ chmod +x apply_iptables_rule.sh \
 #
 # ---------------------------------------------------
 
-# # 每隔 3 分钟检测下所有的服务是否运行, 以及 iptables rule 是否失效.
-# add_service wan-start 'cru a run-services "*/3 * * * * /jffs/scripts/services-start"'
-# add_service wan-start 'cru a run-iptables "*/3 * * * * /opt/etc/apply_iptables_rule.sh"'
-# # 每个周日的 5: 25 升级一次 geosites 数据.
-# add_service wan-start 'cru a update_geodata "25 5 * * 0 /opt/etc/update_geodata.sh"'
-# /jffs/scripts/wan-start
+# 每隔 3 分钟检测下所有的服务是否运行, 以及 iptables rule 是否失效.
+add_service wan-start 'cru a run-services "*/3 * * * * /jffs/scripts/services-start"'
+add_service wan-start 'cru a run-iptables "*/3 * * * * /opt/etc/apply_iptables_rule_redirect.sh"'
+# 每个周日的 5: 25 升级一次 geosites 数据.
+add_service wan-start 'cru a update_geodata "25 5 * * 0 /opt/etc/update_geodata.sh"'
+/jffs/scripts/wan-start
 
-# # Because newest asus merlin introduce AMTM, please enable swap file there if need it.
-# # 打开swap
-# # echo 'Enabling swap'
-# # /opt/etc/enable_swap.sh
-# # add_service post-mount '/opt/etc/enable_swap.sh'
+# Because newest asus merlin introduce AMTM, please enable swap file there if need it.
+# 打开swap
+# echo 'Enabling swap'
+# /opt/etc/enable_swap.sh
+# add_service post-mount '/opt/etc/enable_swap.sh'
 
-# # 如果 DHCP 重新分配 IP 地址时, 会清除 iptables rule, 此时重新应用 iptables
-# add_service dhcpc-event '/opt/etc/apply_iptables_rule.sh'
+# 如果 DHCP 重新分配 IP 地址时, 会清除 iptables rule, 此时重新应用 iptables
+add_service dhcpc-event '/opt/etc/apply_iptables_rule_redirect.sh'
 
-# add_service services-start '[ -f /tmp/patch_router_was_run_at ] || /opt/etc/patch_router'
+add_service services-start '[ -f /tmp/restart_dnsmasq_was_run_at ] || /opt/etc/restart_dnsmasq'
 
 /opt/etc/patch_router && echo "Congratulations, [0m[33mDeploy succssful[0m!"

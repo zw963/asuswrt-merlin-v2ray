@@ -1,5 +1,9 @@
 #!/bin/sh
 
+if iptables -t mangle -C PREROUTING -j V2RAY_UDP 2>/dev/null; then
+    exit 0
+fi
+
 ROOT=${0%/*}/
 
 if [ -t 1 ]; then
@@ -8,11 +12,6 @@ if [ -t 1 ]; then
     else
         $ROOT/clean_iptables_rule.sh
     fi
-fi
-
-if iptables -t nat -C PREROUTING -p tcp -j V2RAY_TCP 2>/dev/null ||
-        iptables -t mangle -C PREROUTING -j V2RAY_UDP 2>/dev/null; then
-    exit 0
 fi
 
 echo -n 'Applying iptables rule ...'
@@ -30,7 +29,6 @@ else
     dns_port=65053
     sleep=1
 fi
-
 
 if [ -n "$v2ray_config" ]; then
     config_file=$v2ray_config
@@ -53,38 +51,6 @@ if [ -z "$v2ray_server_ip" ]; then
     echo "can not find out remote VPS ip/domain in $config_file"
     exit
 fi
-
-function apply_redirect_rule () {
-    echo -n ' Applying redirect rule ...'
-    iptables -t nat -N V2RAY_TCP # 代理局域网 TCP 流量
-
-    # step 1: 所有针对本地地址、局域网地址、VPS 服务器地址的流量直连
-    iptables -t nat -A V2RAY_TCP -d 127.0.0.0/8 -j RETURN
-    iptables -t nat -A V2RAY_TCP -d $v2ray_server_ip -j RETURN
-    iptables -t nat -A V2RAY_TCP -d 192.168.0.0/16 -j RETURN
-
-    # step 4: 从 V2Ray 发出的流量，再次经过时 netfilter 时，如果是 V2Ray 标记过
-    # 为 255 的流量，全部走直连.
-    iptables -t nat -A V2RAY_TCP -p tcp -j RETURN -m mark --mark 0xff
-
-    # step 2: 所有剩下的流量会转发给 V2Ray 本地监听的端口.
-    # REDIRECT其实是 DNAT 的一种特殊形式，
-    # 特殊在其把数据包的目标 IP 改成了 127.0.0.1，端口改成了--to-ports 参数指定的本地端口，
-    # 这样本机的透明代理程序就能处理这个包，应用能通过内核的状态信息拿到被改写之前的目标 IP 和端口号
-    iptables -t nat -A V2RAY_TCP -p tcp -j REDIRECT --to-ports $local_v2ray_port
-
-    # step 3: V2Ray 内部处理，并将 outbounds 的流量全部通过 streamSettings.sockopt.mark: 255, set mark 255.
-
-    # 应用到 PREROUTING 关卡的事情：
-    # 1. 针对目标地址为本地地址、VPS 地址的数据包，直接返回
-    # 2. 剩下的目标地址为远程地址的数据包，全部转发到 local v2ray port
-
-    # 针对外部来的流量，应用 V2RAY_TCP 策略
-    iptables -t nat -A PREROUTING -p tcp -j V2RAY_TCP
-
-    # 将 V2RAY_TCP 这个 rule-chain, 附加到 OUTPUT 这个网关的 `nat 占位符' 的最后面.
-    iptables -t nat -A OUTPUT -p tcp -j V2RAY_TCP
-}
 
 function apply_tproxy_rule () {
     echo -n ' Applying TProxy rule ...'
@@ -183,22 +149,18 @@ function apply_socket_rule () {
     iptables -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
 }
 
-if [ -e /opt/etc/use_redirect_proxy ]; then
-    apply_redirect_rule
-else
-    if modprobe xt_TPROXY &>/dev/null; then
-        apply_tproxy_rule
-        # 下面的 rule 使得路由器内访问 google 可以工作。
-        # 似乎在 fakedns 模式下不工作。
-        apply_gateway_rule
-        # apply_socket_rule
+if modprobe xt_TPROXY &>/dev/null; then
+    apply_tproxy_rule
+    # 下面的 rule 使得路由器内访问 google 可以工作。
+    # 似乎在 fakedns 模式下不工作。
+    apply_gateway_rule
+    # apply_socket_rule
 
-        if [ "$use_asuswrt" == true ]; then
-            apply_DNS_redirect
-        fi
-    else
-        apply_redirect_rule
+    if [ "$use_asuswrt" == true ]; then
+        apply_DNS_redirect
     fi
+else
+    echo 'Not support tproxy, exit ...'
 fi
 
 echo '[0m[1;32m done.[0m'
