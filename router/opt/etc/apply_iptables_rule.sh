@@ -12,6 +12,9 @@ if [ -t 1 ]; then
     else
         $ROOT/clean_iptables_rule.sh
     fi
+else
+    echo -n 'Sleep 10 seconds for waiting sync system time'
+    sleep 10
 fi
 
 echo -n 'Applying iptables rule ...'
