@@ -120,7 +120,7 @@ function enable_proxy () {
     if [ -e /opt/etc/init.d/S22${service_name} ]; then
         chmod +x /opt/etc/init.d/S22${service_name} && sh /opt/etc/init.d/S22${service_name} start
     else
-        systemctl start ${service_name} && systemctl enable ${service_name}
+        systemctl restart ${service_name} && systemctl enable ${service_name}
     fi
 
     echo '[0m[0;33m => Proxy is enabled.[0m'
