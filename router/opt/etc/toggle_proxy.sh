@@ -98,13 +98,17 @@ function enable_proxy () {
 
         if [ -e /opt/etc/use_fakedns ]; then
             echo 'Apply fakeDNS config ...'
+            # 将 destOverride 选项替换为 ["fakedns"]
             replace_multiline1 '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["fakedns"]' $config
             if ! match_multiline '"servers":\s*\[.*?"fakedns",.*?"8.8.4.4",' "$(cat $config)"; then
+                # DNS 的第一项增加 "fakedns", 在 ""8.8.8.4" 之前。
                 replace_multiline1 '("servers":\s*\[)(.*?)(\s*)"8.8.4.4",' '$1$3"fakedns",$2$3"8.8.4.4",' $config
             fi
         else
             echo 'Apply TProxy config ...'
+            # 将 destOverride 选项替换为 ["http", "tls"]
             replace_multiline1 '("tag":\s*"transparent",.+?)"destOverride": \[.+?\]' '$1"destOverride": ["http", "tls"]' $config
+            # 将路由中 "8.8.4.4" 之前的配置都清除掉。
             replace_multiline1 '("servers":\s*\[).*?(\s*)"8.8.4.4",' '$1$2"8.8.4.4",' $config
         fi
     else
