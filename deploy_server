@@ -2,14 +2,7 @@
 
 self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.7/deploy_start.sh)" && eval "$self"
 
-export_variable target=$1
 export_variable use_xtls="${use_xtls-true}"
-export_variable old_uuid=$(ssh $target cat /etc/xray/config.json 2>/dev/null |grep '"flow": "xtls-rprx' -A5 -B5 |grep '"id":' |cut -d: -f2 |cut -d'"' -f2)
-export_variable arch=${router_arch-linux-arm32-v5}
-
-echo "Set \$router_arch env to e.g. \`linux-arm32-v5/' if you want deploy to an asuswrt merlin AC5300 router.
-For the correct Arch name, check https://github.com/XTLS/Xray-core/releases assets.
-The default arch will assume server and side router use linux-amd64, and router using  ${arch}."
 
 if [ "$use_xtls" == "true" ]; then
     export_variable service_name=xray
@@ -17,6 +10,30 @@ if [ "$use_xtls" == "true" ]; then
 else
     export_variable service_name=v2ray
     export_variable another_service_name=xray
+fi
+
+export_variable target=$1
+export_variable old_uuid=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"flow": "xtls-rprx' -A5 -B5 |grep '"id":' |cut -d: -f2 |cut -d'"' -f2)
+export_variable old_port=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep -A3 -B3 '"protocol":\s*"vless\|vmess"' |grep port |grep -o '[0-9]*')
+export_variable old_domain_name=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep certificateFile |cut -d':' -f2 |cut -d'"' -f2 |rev |cut -d'/' -f2 |rev)
+export_variable arch=${router_arch-linux-arm32-v5}
+
+cat <<HEREDOC
+Set \$router_arch env to e.g. \`linux-arm32-v5/' if you want deploy to an asuswrt merlin AC5300 router.
+For the correct Arch name, check https://github.com/XTLS/Xray-core/releases assets.
+The default arch will assume server and side router use linux-amd64, and router using ${arch}.
+
+HEREDOC
+
+if [ -z "$old_port" ] && grep -qs -e 'set_your_server_port_here' ${service_name}_server.json; then
+    echo "You must change \`[0m[33mset_your_server_port_here[0m' in \`./${service_name}_server.json' to the preferred vless/vmess port when the first time do deploy!"
+    exit
+fi
+
+if [ "$use_xtls" == "true" ] && [ -z "$old_domain_name" ] && grep -qs -e 'set_your_domain_name_here' ${service_name}_server.json; then
+    echo "You must change \`[0m[33mset_your_domain_name_here[0m' in \`./${service_name}_server.json' to a domain name which point to this host when the first time do deploy!"
+    echo "e.g. if your's domain name is: \`a.example.com', please set to \`example.com'."
+    exit
 fi
 
 function postinstall () {
@@ -50,18 +67,14 @@ function postinstall () {
 # password=$(cat ${service_name}_server.json |grep '"password"' |cut -d':' -f2 |cut -d'"' -f2)
 # sed -i "s#change_yours_password_here#${password}#" "${another_service_name}_server.json"
 
-if [ "$use_xtls" == "true" ] && grep -qs -e 'set_your_domain_name_here' ${service_name}_server.json; then
-    echo "You must change \`[0m[33mset_your_domain_name_here[0m' in \`./xray_server.json' to a domain name which point to this host!"
-    echo "e.g. if your's domain name is: \`a.example.com', please set to \`example.com'."
-    exit
+
+ssh $target "[ -e /etc/${service_name}/config.json ] && cp -a /etc/${service_name}/config.json /etc/${service_name}/config.json.$(date '+%Y-%m-%d_%H:%M:%S')"
+copy ${service_name}_server.json /etc/${service_name}/config.json
+
+if [ "${service_name}" == xray ]; then
+    copy downloaded_binary/linux-amd64/services/xray.service /etc/systemd/system/xray.service
+    copy downloaded_binary/linux-amd64/services/xray@.service /etc/systemd/system/xray@.service
 fi
-
-
-ssh $target '[ -e /etc/xray/config.json ] && cp -a /etc/xray/config.json /etc/xray/config.json.old'
-copy xray_server.json /etc/xray/config.json
-copy v2ray_server.json /etc/v2ray/config.json
-copy downloaded_binary/linux-amd64/services/xray.service /etc/systemd/system/xray.service
-copy downloaded_binary/linux-amd64/services/xray@.service /etc/systemd/system/xray@.service
 
 deploy_start
 
@@ -146,33 +159,39 @@ mkdir -p /var/log/xray /var/log/v2ray
 # chown nobody:nobody /var/log/xray /var/log/v2ray
 
 if [ "$old_uuid" != NEWUUID ]; then
-    echo "Old uuid $old_uuid exits, use it."
+    echo "Old uuid $old_uuid exists, use it."
     uuid=$old_uuid
 else
     uuid=$(cat /proc/sys/kernel/random/uuid)
 fi
 
-# quic_key=$(uuidgen | sed 's/[-]//g' | head -c 20)
-replace_string 'NEWUUID' "${uuid}" /etc/xray/config.json
-replace_string 'NEWUUID' "${uuid}" /etc/v2ray/config.json
+replace_string 'NEWUUID' "${uuid}" /etc/${service_name}/config.json
 
-# replace_string 'QUIC_KEY' "${quic_key}" /etc/xray/config.json
+# quic_key=$(uuidgen | sed 's/[-]//g' | head -c 20)
+
+if grep -qs -e 'set_your_server_port_here' /etc/${service_name}/config.json; then
+    replace_string 'set_your_server_port_here' "${old_port}" /etc/${service_name}/config.json
+fi
+
+# replace_string 'QUIC_KEY' "${quic_key}" /etc/${service_name}/config.json
 
 # 生成的密钥长度与 2022-blake3-chacha20-poly1305 2022-blake3-aes-256-gcm 兼容
 ss_password=$(openssl rand -base64 32)
-replace_string 'SSPASS' "${ss_password}" /etc/xray/config.json
-replace_string 'SSPASS' "${ss_password}" /etc/v2ray/config.json
+replace_string 'SSPASS' "${ss_password}" /etc/${service_name}/config.json
 
 config_sysctl_for_proxy
 
 systemctl enable $service_name
 
 if [ "$use_xtls" == "true" ]; then
-    domain_name=$(cat /etc/xray/config.json |grep certificateFile | sed 's#.*/etc/ssl/\(.*\)/fullchain.pem.*#\1#g')
-    # 默认不再部署 tls, 因为更新 xray 的时候不一定要更新证书
-    # deploy_tls "$domain_name" "systemctl restart $service_name"
-else
-    domain_name="localhost"
+    if grep -qs -e 'set_your_domain_name_here' /etc/${service_name}/config.json; then
+        replace_string 'set_your_domain_name_here' "${old_domain_name}" /etc/${service_name}/config.json
+        domain_name=${old_domain_name}
+    else
+        domain_name=$(cat /etc/${service_name}/config.json |grep certificateFile |cut -d':' -f2 |cut -d'"' -f2 |rev |cut -d'/' -f2 |rev)
+        # 第一次部署，需要部署证书
+        deploy_tls "$domain_name" "systemctl restart $service_name"
+    fi
 fi
 
 # geoip_version=$(github_latest_release v2fly/geoip)

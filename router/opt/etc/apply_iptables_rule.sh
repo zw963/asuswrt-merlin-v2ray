@@ -24,12 +24,10 @@ if ! opkg --version &>/dev/null; then
     alias iptables='sudo iptables'
     alias ip='sudo ip'
     alias modprobe='sudo modprobe'
-    dns_port=53
     sleep=0.2
 else
     # 路由器
     use_asuswrt=true
-    dns_port=65053
     sleep=1
 fi
 
@@ -68,7 +66,7 @@ function apply_tproxy_rule () {
 
     # step 2: 但是针对局域网地址，tcp 总是流量直连，局域网内目标地址是 53 的 udp 流量，则继续走代理。
     iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p tcp -j RETURN
-    iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp ! --dport $dns_port -j RETURN
+    iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
 
     # step 5: 从 V2Ray 发出的流量，再次经过时 netfilter 时，如果是 V2Ray 标记过
     # 为 255 的流量，全部走直连.
@@ -118,7 +116,7 @@ function apply_gateway_rule () {
     # 如果是旁路由，记得替换下面两行为：iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -j RETURN
     # 来确保时间同步服务可以正常工作。
     iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p tcp -j RETURN
-    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p udp ! --dport $dns_port -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
 
     # 直连 SO_MARK 为 0xff 的流量(0xff 是 16 进制数，数值上等同与上面V2Ray 配置的 255)，此规则目的是避免代理本机(网关)流量出现回环问题
     iptables -t mangle -A V2RAY_MASK -j RETURN -m mark --mark 0xff
@@ -132,6 +130,7 @@ function apply_gateway_rule () {
 }
 
 function apply_DNS_redirect () {
+    # 这个之前只是在 tproxy 模式下，不懂怎么用的时候，监听在 53 或 65053 端口用。
     echo -n 'Redirect all DNS request to localhost port 65053'
 
     iptables -t nat -N V2RAY_DNS
@@ -155,9 +154,9 @@ if modprobe xt_TPROXY &>/dev/null; then
     apply_gateway_rule
     # apply_socket_rule
 
-    if [ "$use_asuswrt" == true ]; then
-        apply_DNS_redirect
-    fi
+    # if [ "$use_asuswrt" == true ]; then
+    #     apply_DNS_redirect
+    # fi
 else
     echo 'Not support tproxy, exit ...'
 fi
