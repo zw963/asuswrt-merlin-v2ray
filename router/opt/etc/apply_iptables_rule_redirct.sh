@@ -38,9 +38,6 @@ else
     config_file=./config.json
 fi
 
-# 替换 inbounds 里面的第一条，streamSettings 里面 tproxy: "tproxy" 为 tproxy: "redirect"
-sed -i 's#"tproxy": ".*"#"tproxy": "redirect"#' $config_file
-
 local_v2ray_port=$(cat $config_file |grep '"inbounds"' -A10 |grep '"protocol" *: *"dokodemo-door"' -A10 |grep -o '"port": [0-9]*,' |grep -o '[0-9]*')
 
 if [ -z "$local_v2ray_port" ]; then

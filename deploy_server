@@ -4,7 +4,7 @@ self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.7/deploy_s
 
 export_variable target=$1
 export_variable use_xtls="${use_xtls-true}"
-export_variable old_uuid=$(ssh $target cat /etc/xray/config.json 2>/dev/null |grep '"flow": "xtls-rprx' -B3 |grep '"id":' |cut -d: -f2 |cut -d'"' -f2)
+export_variable old_uuid=$(ssh $target cat /etc/xray/config.json 2>/dev/null |grep '"flow": "xtls-rprx' -A5 -B5 |grep '"id":' |cut -d: -f2 |cut -d'"' -f2)
 export_variable arch=${router_arch-linux-arm32-v5}
 
 echo "Set \$router_arch env to e.g. \`linux-arm32-v5/' if you want deploy to an asuswrt merlin AC5300 router.
@@ -50,7 +50,7 @@ function postinstall () {
 # password=$(cat ${service_name}_server.json |grep '"password"' |cut -d':' -f2 |cut -d'"' -f2)
 # sed -i "s#change_yours_password_here#${password}#" "${another_service_name}_server.json"
 
-if [ "$use_xtls" ] && grep -qs -e 'set_your_domain_name_here' ${service_name}_server.json; then
+if [ "$use_xtls" == "true" ] && grep -qs -e 'set_your_domain_name_here' ${service_name}_server.json; then
     echo "You must change \`[0m[33mset_your_domain_name_here[0m' in \`./xray_server.json' to a domain name which point to this host!"
     echo "e.g. if your's domain name is: \`a.example.com', please set to \`example.com'."
     exit
@@ -158,6 +158,7 @@ replace_string 'NEWUUID' "${uuid}" /etc/v2ray/config.json
 
 # replace_string 'QUIC_KEY' "${quic_key}" /etc/xray/config.json
 
+# 生成的密钥长度与 2022-blake3-chacha20-poly1305 2022-blake3-aes-256-gcm 兼容
 ss_password=$(openssl rand -base64 32)
 replace_string 'SSPASS' "${ss_password}" /etc/xray/config.json
 replace_string 'SSPASS' "${ss_password}" /etc/v2ray/config.json
@@ -166,7 +167,7 @@ config_sysctl_for_proxy
 
 systemctl enable $service_name
 
-if [ "$use_xtls" ]; then
+if [ "$use_xtls" == "true" ]; then
     domain_name=$(cat /etc/xray/config.json |grep certificateFile | sed 's#.*/etc/ssl/\(.*\)/fullchain.pem.*#\1#g')
     # 默认不再部署 tls, 因为更新 xray 的时候不一定要更新证书
     # deploy_tls "$domain_name" "systemctl restart $service_name"
@@ -262,12 +263,6 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                 "outboundTag": "direct"
             },
             {
-                // redirect 透明代理必需。
-                "type": "field",
-                "inboundTag": ["dns-inbound"],
-                "outboundTag": "dns-outbound"
-            },
-            {
                 "type": "field",
                 "ip": ["8.8.4.4"],
                 "outboundTag": "proxy"
@@ -346,20 +341,6 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
             }
         },
         {
-            // redirect 透明代理必需(不支持tproxy时), 用来接受从 dnsmasq 转发过来的 DNS 流量。
-            "tag": "dns-inbound",
-            "protocol": "dokodemo-door",
-            "port": 65053, // 当使用 redirect 模式时, 在 65053 端口监听来自于 dnsmasq 的 udp 流量.
-            "settings": {
-                // 这里是流量被转发到的地址，端口，可接受的网络协议类型
-                // 注意： 这有别于 dns-outbound 中对应的配置，后者是直接修改 DNS 服务器地址/端口
-                // 因为这里的流量直接来自 dnsmasq, 所以这个 address 必须填, 似乎随便填都可以.
-                "address": "8.8.4.4",
-                "port": 53,
-                "network": "udp"
-            }
-        },
-        {
             "protocol": "socks", // 入口协议为 SOCKS 5
             "port": 1080, // 监听端口
             "settings": {
@@ -387,14 +368,22 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
             "settings": {
                 "vnext": [
                     {
-                        "address": "$targetip", // 服务器地址，请修改为你自己的服务器 IP 或域名
+                        "address": "$domain_name", // 服务器地址，请修改为你自己的服务器 IP 或域名
                         "port": $v2ray_port,  // 服务器端口
                         "users": [
                             {
                                 // 注意, vmess 加密默认开启, 也必须开启, 否则上不了网.
-                                // vless 则关闭加密，必须设定 encryption 为 none.
                                 // alterId 默认为 0, 表示开启 VMessAEAD.
+                                // vless 则默认关闭加密 none，但必须有这个设定
                                 "encryption": "none",
+                                // Splice 模式的的使用限制：
+
+                                // Linux 环境
+                                // 入站协议为 Dokodemo door、Socks、HTTP 等纯净的 TCP 连接, 或其它使用了 XTLS 的入站协议
+                                // 出站协议为 VLESS + XTLS
+                                // 需要注意的是，使用 mKCP 协议时不会使用 Splice（是的，虽然没有报错，但实际上根本没用到
+                                // 此外，使用 Splice 时网速显示会滞后，这是特性，不是 bug。
+                                // 使用 Vision 模式 如果满足上述条件 会自动启用 Splice
                                 "flow": "xtls-rprx-vision",
                                 "id": "$uuid"  // 用户 ID，必须与服务器端配置相同
                             }
@@ -404,9 +393,11 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
             },
             "streamSettings": {
                 "network": "tcp",
-                "security": "tls", // 需要使用 XTLS
+                // 需要使用 XTLS, 最近出了个 reality 方式，用户无需有自己的域名，可以使用任何合法的网站。
+                "security": "tls",
                 "tlsSettings": {
-                    "serverName": "$domain_name" // 换成你的域名
+                    // "serverName": "$domain_name", // 换成你的域名, 如果上面 address 指定域名，这里不需要了。
+                    "fingerprint" : "firefox"
                 },
                 "sockopt": {
                     "mark": 255
@@ -418,7 +409,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
             "settings": {
                 "servers": [
                     {
-                        "address": "$targetip", // Shadowsocks 的服务器地址
+                        "address": "$domain_name", // Shadowsocks 的服务器地址
                         "method": "$ss_encrypt_method", // Shadowsocks 的加密方式
                         "password": "$ss_password", // Shadowsocks 的密码
                         "port": $ss_port
@@ -435,9 +426,6 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
             // 识别这是一个 DNS 请求， 并发送到内部 DNS 进行查询.
             "tag": "dns-outbound",
             "protocol": "dns",
-            "settings": {
-                "address": "8.8.4.4"
-            },
             "proxySettings": {
                 "tag": "proxy"
             },
@@ -481,7 +469,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
 }
 HEREDOC
 
-if [ -z "$use_xtls" ]; then
+if [ "$use_xtls" != true ]; then
     replace_string '"protocol": "vless",' '"protocol": "vmess",' /etc/$service_name/client_config.json
     replace_multiline1 '"encryption": "none",\s*"flow": "xtls-rprx-.*?",' '' /etc/$service_name/client_config.json
     replace_multiline1 '"network": "tcp",\s*"security": "xtls".*?},' '"network": "quic",
