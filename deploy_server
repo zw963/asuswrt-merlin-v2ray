@@ -245,7 +245,6 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
     },
     "routing": {
         "domainStrategy": "IPIfNonMatch",
-        "domainMatcher": "mph",
         "rules": [
             {
                 // tproxy 透明代理必需。
@@ -258,7 +257,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
             {
                 "type": "field",
                 "inboundTag": ["transparent"],
-                "port": 123,
+                "port": "123,323",
                 "network": "udp",
                 "outboundTag": "direct"
             },
