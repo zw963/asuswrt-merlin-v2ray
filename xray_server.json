@@ -10,7 +10,7 @@
   "inbounds": [
     {
       "protocol": "vless",
-      "port": 22334,
+      "port": set_your_server_port_here,
       "settings": {
         "decryption": "none",
         "clients": [
