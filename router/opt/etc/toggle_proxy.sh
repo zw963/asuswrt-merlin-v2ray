@@ -67,10 +67,10 @@ function disable_proxy () {
 
     if [ -e /opt/etc/init.d/S22${service_name} ]; then
         chmod -x /opt/etc/init.d/S22${service_name} && sh /opt/etc/init.d/S22${service_name} stop
-        # disalbe_proxy 并没有停止 v2ray 服务.
-        # 因为即使关闭透明代理，仍可以通过浏览器插件使用 v2ray 的 socks 代理或 http 代理服务。
-        # else
-        #     systemctl disable ${service_name} && systemctl stop ${service_name}
+    #     # disalbe_proxy 并没有停止 v2ray 服务.
+    #     # 因为即使关闭透明代理，仍可以通过浏览器插件使用 v2ray 的 socks 代理或 http 代理服务。
+    # else
+    #     systemctl disable ${service_name} && systemctl stop ${service_name}
     fi
     /opt/etc/clean_iptables_rule.sh && chmod -x /opt/etc/apply_iptables_rule.sh
 

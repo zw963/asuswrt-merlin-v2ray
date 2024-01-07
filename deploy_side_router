@@ -58,7 +58,7 @@ function postinstall () {
     fi
 }
 
-ssh "$*" "sudo mkdir -p /opt/etc /opt/sbin /var/log/v2ray"
+ssh "$*" "sudo mkdir -p /opt/etc /opt/sbin /var/log/${service_name}"
 copy router/opt/etc/apply_iptables_rule.sh /opt/etc/
 copy router/opt/etc/clean_iptables_rule.sh /opt/etc
 copy router/opt/etc/update_geodata.sh /opt/etc
@@ -114,7 +114,7 @@ if ! ./$service_name version &>/dev/null; then
 fi
 
 set +e
-systemctl stop v2ray
+systemctl stop ${service_name}
 set -e
 
 cp $service_name geosite.dat geoip-only-cn-private.dat /opt/sbin/
@@ -166,7 +166,7 @@ systemctl disable firewalld &>/dev/null
 systemctl stop firewalld &>/dev/null
 set -e
 
-systemctl daemon-reload && systemctl start v2ray && systemctl enable v2ray && systemctl status v2ray
+systemctl daemon-reload && systemctl start ${service_name} && systemctl enable ${service_name} && systemctl status ${service_name}
 systemctl start iptables-rule &&  systemctl enable iptables-rule
 cp /opt/etc/update_geodata.sh /etc/cron.weekly/
 
