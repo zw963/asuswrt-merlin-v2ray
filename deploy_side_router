@@ -1,6 +1,6 @@
 #!/bin/bash
 
-self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.7/deploy_start.sh)" && eval "$self"
+self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.9/deploy_start.sh)" && eval "$self"
 
 export_variable target=$1
 export_variable arch=${router_arch-linux-amd64}
@@ -48,8 +48,12 @@ Current auto-detect: ${service_name}.
 function postinstall () {
     set -u
     echo
-    echo 'Please waiting for 10 seconds to check google available ...'
-    sleep 10
+    echo 'Please waiting for 3 seconds to check google available ...'
+
+    sleep 3
+
+    sh /opt/etc/check_google_use_socks5.sh
+
     check_google=$(curl -so /dev/null -w 'Google: %{http_code}\n' google.com)
     if [[ "$check_google" =~ 301|200 ]]; then
         echo "visit google successful, Your's ip is: $(curl http://ipecho.net/plain; echo)"
