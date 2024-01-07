@@ -419,6 +419,9 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "fingerprint" : "firefox"
                 },
                 "sockopt": {
+                    "tcpcongestion": "bbr", // 这个会自动使用系统设置
+                    "tcpMptcp": true,
+                    "tcpNoDelay": true,
                     "mark": 255
                 }
             }
