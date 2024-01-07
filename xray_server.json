@@ -1,78 +1,78 @@
 {
-  "log": {
-    "access": "/var/log/xray/access.log",
-    "error": "/var/log/xray/error.log",
-    "loglevel": "warning"
-  },
-  "dns": {
-    "servers": ["https+local://dns.google/dns-query"]
-  },
-  "inbounds": [
-    {
-      "protocol": "vless",
-      "port": set_your_server_port_here,
-      "settings": {
-        "decryption": "none",
-        "clients": [
-          {
-            "id": "NEWUUID",
-            "flow": "xtls-rprx-vision"
-          }
-        ]
-      },
-      "streamSettings": {
-        "network": "tcp",
-        "security": "tls",
-        "tlsSettings": {
-          "alpn": ["http/1.1"],
-          "certificates": [
-            {
-                            "certificateFile": "/etc/ssl/set_your_domain_name_here/fullchain.pem", // 换成你的证书，绝对路径
-                            "keyFile": "/etc/ssl/set_your_domain_name_here/privkey.pem" // 换成你的私钥，绝对路径
+    "log": {
+        "access": "/var/log/xray/access.log",
+        "error": "/var/log/xray/error.log",
+        "loglevel": "warning"
+    },
+    "dns": {
+        "servers": ["https+local://dns.google/dns-query"]
+    },
+    "inbounds": [
+        {
+            "protocol": "vless",
+            "port": set_your_server_port_here,
+            "settings": {
+                "decryption": "none",
+                "clients": [
+                    {
+                        "id": "NEWUUID",
+                        "flow": "xtls-rprx-vision"
+                    }
+                ]
+            },
+            "streamSettings": {
+                "network": "tcp",
+                "security": "reality",
+                "realitySettings": {
+                    "dest": "dl.google.com:443",
+                    "serverNames": ["dl.google.com"],
+                    "privateKey": "REALITY_PRIVATE_KEY_HERE",
+                    "shortIds": [""]
+                }
+
             }
-          ]
+        },
+        {
+            "protocol": "shadowsocks",
+            "port": 22335, // 监听端口
+            "settings": {
+                "method": "2022-blake3-chacha20-poly1305",
+                "password": "SSPASS"
+            }
         }
-      }
+    ],
+    "outbounds": [
+        {
+            "protocol": "freedom",
+            "settings": {
+                // 默认是 AsIs, 不会使用 V2ray 内置的 DNS 服务器进行解析,
+                // 改为 UseIP, 表示使用 V2ray 内置 DNS 服务器将域名解析为 IP 之后再建立连接。
+                "domainStrategy": "UseIP"
+            }
+        },
+        {
+            "tag": "block",
+            "protocol": "blackhole",
+            "settings": {}
+        }
+    ],
+    "routing": {
+        "rules": [
+            {
+                "type": "field",
+                "ip": [
+                    "ext:geoip-only-cn-private.dat:private",
+                    "ext:geoip-only-cn-private.dat:cn"
+                ],
+                "outboundTag": "block"
+            }
+        ]
     },
-    {
-      "protocol": "shadowsocks",
-      "port": 22335, // 监听端口
-      "settings": {
-        "method": "2022-blake3-chacha20-poly1305",
-        "password": "SSPASS"
-      }
+    "policy": {
+        "levels": {
+            "0": {
+                "bufferSize": 2048
+            }
+        }
     }
-  ],
-  "outbounds": [
-    {
-      "protocol": "freedom",
-      "settings": {
-        // 默认是 AsIs, 不会使用 V2ray 内置的 DNS 服务器进行解析,
-        // 改为 UseIP, 表示使用 V2ray 内置 DNS 服务器将域名解析为 IP 之后再建立连接。
-        "domainStrategy": "UseIP"
-      }
-    },
-    {
-      "tag": "block",
-      "protocol": "blackhole",
-      "settings": {}
-    }
-  ],
-  "routing": {
-    "domainMatcher": "mph",
-    "rules": [
-      {
-        "type": "field",
-        "ip": ["ext:geoip-only-cn-private.dat:private"],
-        "outboundTag": "block"
-      }
-    ]
-  },
-  "policy": {
-    "levels": {
-      "0": {
-        "bufferSize": 2048
-      }
-    }
-  }
 }

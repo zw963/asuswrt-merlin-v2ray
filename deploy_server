@@ -15,7 +15,8 @@ fi
 export_variable target=$1
 export_variable old_uuid=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"flow": "xtls-rprx' -A5 -B5 |grep '"id":' |cut -d: -f2 |cut -d'"' -f2)
 export_variable old_port=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep -A3 -B3 '"protocol":\s*"vless\|vmess"' |grep port |grep -o '[0-9]*')
-export_variable old_domain_name=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep certificateFile |cut -d':' -f2 |cut -d'"' -f2 |rev |cut -d'/' -f2 |rev)
+export_variable old_reality_domain_name=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"dest":' |cut -d':' -f2- |cut -d'"' -f2)
+export_variable old_reality_private_key=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"privateKey":' |cut -d: -f2- |cut -d'"' -f2)
 export_variable arch=${router_arch-linux-arm32-v5}
 
 cat <<HEREDOC
@@ -27,12 +28,6 @@ HEREDOC
 
 if [ -z "$old_port" ] && grep -qs -e 'set_your_server_port_here' ${service_name}_server.json; then
     echo "You must change \`[0m[33mset_your_server_port_here[0m' in \`./${service_name}_server.json' to the preferred vless/vmess port when the first time do deploy!"
-    exit
-fi
-
-if [ "$use_xtls" == "true" ] && [ -z "$old_domain_name" ] && grep -qs -e 'set_your_domain_name_here' ${service_name}_server.json; then
-    echo "You must change \`[0m[33mset_your_domain_name_here[0m' in \`./${service_name}_server.json' to a domain name which point to this host when the first time do deploy!"
-    echo "e.g. if your's domain name is: \`a.example.com', please set to \`example.com'."
     exit
 fi
 
@@ -184,14 +179,37 @@ config_sysctl_for_proxy
 systemctl enable $service_name
 
 if [ "$use_xtls" == "true" ]; then
-    if grep -qs -e 'set_your_domain_name_here' /etc/${service_name}/config.json; then
-        replace_string 'set_your_domain_name_here' "${old_domain_name}" /etc/${service_name}/config.json
-        domain_name=${old_domain_name}
+    if [ -z "$old_reality_domain_name" ]; then
+        # 使用 xray_server.json 中的默认配置，即: dl.google.com:443
+        reality_domain_name=$(cat /etc/${service_name}/config.json |grep '"dest":' |cut -d':' -f2- |cut -d'"' -f2)
+        client_server_name=$(echo ${reality_domain_name} |cut -d: -f1)
+
+        echo "reality domain name use ${reality_domain_name}"
     else
-        domain_name=$(cat /etc/${service_name}/config.json |grep certificateFile |cut -d':' -f2 |cut -d'"' -f2 |rev |cut -d'/' -f2 |rev)
-        # 第一次部署，需要部署证书
-        deploy_tls "$domain_name" "systemctl restart $service_name"
+        # 使用上次部署的配置
+        reality_domain_name=$old_reality_domain_name
+        client_server_name=$(echo ${reality_domain_name} |cut -d: -f1)
+
+        replace_string '"dest": "dl.google.com:443"' "\"dest\": \"${reality_domain_name}\"" /etc/${service_name}/config.json
+        replace_string '"serverNames": ["dl.google.com"]' "\"serverNames\": [\"${client_server_name}\"]" /etc/${service_name}/config.json
     fi
+
+    if [ -z "$old_reality_private_key" ]; then
+        # 重新生成
+        echo "Geneate new x25519 key pairs ..."
+
+        key_pairs=$(/usr/local/bin/xray x25519)
+        reality_private_key=$(echo "$key_pairs" |head -n1 |cut -d: -f2 |cut -d' ' -f2)
+        reality_public_key=$(echo "$key_pairs" |tail -n1 |cut -d: -f2 |cut -d' ' -f2)
+
+    else
+        reality_private_key=$old_reality_private_key
+        reality_public_key=$(/usr/local/bin/xray x25519 -i $reality_private_key |tail -n1 |cut -d: -f2 |cut -d' ' -f2)
+        replace_string '"dest": "dl.google.com:443"' "\"dest\": \"${reality_domain_name}\"" /etc/${service_name}/config.json
+        replace_string '"serverNames": ["dl.google.com"]' "\"serverNames\": [\"$(echo ${reality_domain_name} |cut -d: -f1)\"]" /etc/${service_name}/config.json
+    fi
+
+    replace_string 'REALITY_PRIVATE_KEY_HERE' "$reality_private_key" /etc/${service_name}/config.json
 fi
 
 # geoip_version=$(github_latest_release v2fly/geoip)
@@ -222,7 +240,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
     },
     "dns": {
         "hosts": {
-            "$domain_name": "$targetip"
+            "geosite:category-ads-all": "127.0.0.1"
         },
         "servers": [
             // V2Ray 会使用 DNS over HTTPS (RFC8484, 简称DOH) 进行查询。
@@ -387,7 +405,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
             "settings": {
                 "vnext": [
                     {
-                        "address": "$domain_name", // 服务器地址，请修改为你自己的服务器 IP 或域名
+                        "address": "$targetip", // 服务器地址，请修改为你自己的服务器 IP 或域名
                         "port": $v2ray_port,  // 服务器端口
                         "users": [
                             {
@@ -412,14 +430,15 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
             },
             "streamSettings": {
                 "network": "tcp",
-                // 需要使用 XTLS, 最近出了个 reality 方式，用户无需有自己的域名，可以使用任何合法的网站。
-                "security": "tls",
-                "tlsSettings": {
-                    // "serverName": "$domain_name", // 换成你的域名, 如果上面 address 指定域名，这里不需要了。
-                    "fingerprint" : "firefox"
+                // reality 方式，用户无需拥有自己的域名，可以使用任何合法的网站，速度也更快。
+                "security": "reality",
+                "realitySettings": {
+                    "fingerprint": "chrome",
+                    "serverName": "${client_server_name}",
+                    "publicKey": "${reality_public_key}"
                 },
                 "sockopt": {
-                    "tcpcongestion": "bbr", // 这个会自动使用系统设置
+                    "tcpcongestion": "bbr", // 如果不设定，会自动使用系统设置
                     "tcpMptcp": true,
                     "tcpNoDelay": true,
                     "mark": 255
@@ -431,7 +450,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
             "settings": {
                 "servers": [
                     {
-                        "address": "$domain_name", // Shadowsocks 的服务器地址
+                        "address": "$targetip", // Shadowsocks 的服务器地址
                         "method": "$ss_encrypt_method", // Shadowsocks 的加密方式
                         "password": "$ss_password", // Shadowsocks 的密码
                         "port": $ss_port
@@ -494,7 +513,7 @@ HEREDOC
 if [ "$use_xtls" != true ]; then
     replace_string '"protocol": "vless",' '"protocol": "vmess",' /etc/$service_name/client_config.json
     replace_multiline1 '"encryption": "none",\s*"flow": "xtls-rprx-.*?",' '' /etc/$service_name/client_config.json
-    replace_multiline1 '"network": "tcp",\s*"security": "xtls".*?},' '"network": "quic",
+    replace_multiline1 '"network": "tcp",\s*"security":.*?},' '"network": "quic",
                "quicSettings": {
                     "header": {
                         "type": "wechat-video"
