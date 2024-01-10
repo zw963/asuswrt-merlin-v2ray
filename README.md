@@ -12,6 +12,7 @@ This project is several scripts for config you ASUS router(merlin based) or
 Side router(A very old linux laptop) to serve as a transparent forward proxy.
 
 Since 2023-07-16, this project's release version just follow [Xray-core](https://github.com/XTLS/Xray-core)'s version.
+Since 2024-01-07, the default deploy use Xray + Reality.
 
 ## Feature
 
@@ -21,18 +22,14 @@ Since 2023-07-16, this project's release version just follow [Xray-core](https:/
 4. All additional benefits come from V2Ray.
 5. Xray + XTLS support.
 
-For transparent proxy, current three mode is supported, will select automatically depend on your's router device.
-
-1. tproxy mode will be used if routers support TProxy.
-2. redirect mode will be used if router not support TProxy.
-3. fakedns mode based on tproxy mode, it can only switch on manually.
+For transparent proxy, current only tproxy mode mode is supported, can be used with fakedns optionally.
 
 *NOTICE*
 
-redirect mode require dnsmasq serve as LAN DNS server, if you asuswrt merlin, this is default mode.
-others mode V2Ray and basically build tools(For use with QUIC) is the only dependency.
+redirect mode is possible, check script `./deploy_router_use_direct`, dnsmasq serve as LAN DNS server, you only need this if you have a very old ASUS router which not support tproxy.
+Even, can always select `side router + router` for any (old) router.
 
-You can always check weather router support TProxy:
+You can always check weather router support TProxy use:
 
 ```sh
 # modprobe xt_TPROXY
@@ -40,21 +37,13 @@ You can always check weather router support TProxy:
 
 ## Switch proxy mode
 
-You can switch modes after deploy successful.
-
-### Switch to use old redirect transparent proxy (need dnsmasq)
-
-```sh
-$: ./deploy_router_use_direct admin@192.168.50.1
-```
-
-### Switch to use fakedns based transparent proxy (need TProxy support)
+You can try switch to use fakedns based transparent proxy after deploy successful like this:
 
 ```sh
 $: ./use_fakedns admin@192.168.50.1
 ```
 
-### Switch to auto mode (default)
+and switch back use:
 
 ```sh
 $: ./use_auto_proxy admin@192.168.50.1
@@ -63,7 +52,7 @@ $: ./use_auto_proxy admin@192.168.50.1
 ## Prerequisites
 
 - A VPS which can visit free internet.
-- A newer router which support [Entware](https://github.com/Entware/Entware), and can run V2ray comfortable.
+- A newer router which support [Entware](https://github.com/Entware/Entware), and can run V2ray/xray comfortable.
   (i use ASUS RT-AC5300, I think OpenWRT should satisfied too after a little hack)
 - Update yours router firmware to [Asuswrt-merlin](https://github.com/RMerl/asuswrt-merlin.ng)
 - Initialize Entware, please follow this [wiki](https://github.com/RMerl/asuswrt-merlin.ng/wiki/Entware)
@@ -85,14 +74,10 @@ We assume your's linux VPS IP is `34.80.108.8`, your's router IP is `192.168.50.
 
 Test on CentOS 8, Ubuntu 18.0.4, Debian GNU/linux 9.
 
-Following is the sample output for deploy Xray but keep exists config unchanged.
-
-If you deploy XRay instead of V2Ray, you must replace `set_your_domain_name_here` 
-into your's really domain name at first, and run `deploy_tls` to apply the https certificate
-if you are not set it correctly, then run `deploy_server` script like following:
+By default, use Xray + Reality, you need expose port 22334/22335 for listen on vless/shadowsocks
 
 ```sh
- ╰─ $ use_xtls=1 ./deploy_server root@$hk
+ ╰─ $ ./deploy_server root@$hk
 sending incremental file list
 xray_server.json
           2.31K 100%  914.06kB/s    0:00:00 (xfr#1, to-chk=0/1)
@@ -106,17 +91,16 @@ Run ./deploy_side_router root@side_router_ip to deploy to side_router.
 
 ### Deploy client config to router, serve as a transparent proxy.
 
-Previous step will create a new v2ray client config for you in `router/opt/etc/v2ray.json`.
+Previous step will create a new xray client config with binary for you in `downloaded_binary/$your_router_arch/`. the default router arch is linux-arm-v5 for ASUS AC-5300, you can override with export router_arch=YOUR_ROUTER_ARCH, for the correct Arch name, check https://github.com/XTLS/Xray-core/releases assets
 
-Run following command will deploy V2ray transparent proxy to your's local ASUS
-router automatically.
+Then, run following command will deploy Xray transparent proxy to your's local ASUS router automatically.
 
 
 ```sh
 ./deploy_router admin@192.168.50.1
 ```
 
-Run following command will deploy to a side router.(for me, it is a HP 2530p laptop + CentOS 8)
+Run following command will deploy files in `downloaded_binary/amd64` to a side router.(for me, it is a HP 2530p laptop + CentOS 8)
 
 ```sh
 ./deploy_side_router root@192.168.51.111
@@ -141,27 +125,23 @@ You can run following command on router
 
 `/opt/etc/update_geodata.sh` is used for update geosite data.
 
-`/opt/etc/enable_swap.sh` is used for enable swap for insufficient RAM device.(if not use amtm enable it already.)
-
 `/opt/etc/apply_iptables_rule.sh` `/opt/etc/clean_iptables_rule.sh` for enable/clean iptables rule.
 
-`/opt/etc/restart_dnsmasq.sh` for restart dnsmasq. (for router which install dnsmasq only)
+`/opt/etc/check_google_use_socks5` check xray connection if works. (not work for fakeDNS mode)
 
-`/opt/etc/check_google_use_socks5` check v2ray if works in router. (not work for fakeDNS mode)
-
-`/opt/etc/check_google_use_proxy` check v2ray transparent proxy if works in router. (not work for fakeDNS mode)
+`/opt/etc/check_google_use_proxy` check transparent proxy if works in (side)router. (not work for fakeDNS mode)
 
 ## troubleshooting step by step
 
-1. ensure you can ping your's VPS from local, and can ssh login.
-2. ensure you can visit it use telnet from yours VPS, e.g. for port 22334, `telnet 127.0.0.1 22334`
-3. ensure you can visit it use telnet from local, e.g. `telnet {yours.ip} 22334`, 
+1. ensure you can ping through your's VPS from local, and can ssh login to VPS server.
+2. ensure you can visit VPS listened port use telnet from VPS locally, e.g. `telnet 127.0.0.1 22334`
+3. ensure you can visit VPS exposed port outside VPS from local, e.g. `telnet {yours.vpsip} 22334`, 
    if not, check if port is blocked in yours area with: https://tcp.ping.pe/{your.ip}:22334
-4. ensure your's domain name certificate not expired. (visit site if you have website, or see server xray log)
+4. ensure your's domain name certificate not expired. (try visit if you have website, or see server xray log)
 5. ensure domain name connect to your ip correct.
 6. check config settings, especially, the `vless id`, `vless port`, `domain name` correct.
 7. test with `./check_google_use_socks5.sh`, ensure it work before test transparent proxy.
-8. check the current time in local/remote all correct.
+8. check the system time in local/remote all correct.
 9. Create a issue
 
 ## Contributing
