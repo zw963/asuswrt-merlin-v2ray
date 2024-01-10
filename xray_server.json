@@ -10,7 +10,7 @@
     "inbounds": [
         {
             "protocol": "vless",
-            "port": set_your_server_port_here,
+            "port": 22334,
             "settings": {
                 "decryption": "none",
                 "clients": [
@@ -24,8 +24,8 @@
                 "network": "tcp",
                 "security": "reality",
                 "realitySettings": {
-                    "dest": "dl.google.com:443",
-                    "serverNames": ["dl.google.com"],
+                    "dest": "www.hko.gov.hk:443",
+                    "serverNames": ["www.hko.gov.hk"],
                     "privateKey": "REALITY_PRIVATE_KEY_HERE",
                     "shortIds": [""]
                 }

@@ -26,11 +26,6 @@ The default arch will assume server and side router use linux-amd64, and router 
 
 HEREDOC
 
-if [ -z "$old_port" ] && grep -qs -e 'set_your_server_port_here' ${service_name}_server.json; then
-    echo "You must change \`[0m[33mset_your_server_port_here[0m' in \`./${service_name}_server.json' to the preferred vless/vmess port when the first time do deploy!"
-    exit
-fi
-
 function postinstall () {
     set -u
     mkdir -p ./downloaded_binary/linux-amd64/services ./downloaded_binary/${arch}
@@ -164,8 +159,8 @@ replace_string 'NEWUUID' "${uuid}" /etc/${service_name}/config.json
 
 # quic_key=$(uuidgen | sed 's/[-]//g' | head -c 20)
 
-if grep -qs -e 'set_your_server_port_here' /etc/${service_name}/config.json; then
-    replace_string 'set_your_server_port_here' "${old_port}" /etc/${service_name}/config.json
+if ! [ -z "$old_port" ]; then
+    replace_multiline1 '("protocal":\s*"vless",.*?)"port":\s*[0-9]*,' '$1"port":'" $old_port" /etc/${service_name}/config.json
 fi
 
 # replace_string 'QUIC_KEY' "${quic_key}" /etc/${service_name}/config.json
@@ -180,7 +175,7 @@ systemctl enable $service_name
 
 if [ "$use_xtls" == "true" ]; then
     if [ -z "$old_reality_domain_name" ]; then
-        # 使用 xray_server.json 中的默认配置，即: dl.google.com:443
+        # 使用 xray_server.json 中的默认配置，即: www.hko.gov.hk:443
         reality_domain_name=$(cat /etc/${service_name}/config.json |grep '"dest":' |cut -d':' -f2- |cut -d'"' -f2)
         client_server_name=$(echo ${reality_domain_name} |cut -d: -f1)
 
@@ -190,8 +185,8 @@ if [ "$use_xtls" == "true" ]; then
         reality_domain_name=$old_reality_domain_name
         client_server_name=$(echo ${reality_domain_name} |cut -d: -f1)
 
-        replace_string '"dest": "dl.google.com:443"' "\"dest\": \"${reality_domain_name}\"" /etc/${service_name}/config.json
-        replace_string '"serverNames": ["dl.google.com"]' "\"serverNames\": [\"${client_server_name}\"]" /etc/${service_name}/config.json
+        replace_string '"dest": "www.hko.gov.hk:443"' "\"dest\": \"${reality_domain_name}\"" /etc/${service_name}/config.json
+        replace_string '"serverNames": ["www.hko.gov.hk"]' "\"serverNames\": [\"${client_server_name}\"]" /etc/${service_name}/config.json
     fi
 
     if [ -z "$old_reality_private_key" ]; then
@@ -205,8 +200,6 @@ if [ "$use_xtls" == "true" ]; then
     else
         reality_private_key=$old_reality_private_key
         reality_public_key=$(/usr/local/bin/xray x25519 -i $reality_private_key |tail -n1 |cut -d: -f2 |cut -d' ' -f2)
-        replace_string '"dest": "dl.google.com:443"' "\"dest\": \"${reality_domain_name}\"" /etc/${service_name}/config.json
-        replace_string '"serverNames": ["dl.google.com"]' "\"serverNames\": [\"$(echo ${reality_domain_name} |cut -d: -f1)\"]" /etc/${service_name}/config.json
     fi
 
     replace_string 'REALITY_PRIVATE_KEY_HERE' "$reality_private_key" /etc/${service_name}/config.json
