@@ -176,6 +176,7 @@ systemctl enable $service_name
 if [ "$use_xtls" == "true" ]; then
     if [ -z "$old_reality_domain_name" ]; then
         # 使用 xray_server.json 中的默认配置，即: www.hko.gov.hk:443
+        # 还可以选择香港运输署 www.td.gov.hk
         reality_domain_name=$(cat /etc/${service_name}/config.json |grep '"dest":' |cut -d':' -f2- |cut -d'"' -f2)
         client_server_name=$(echo ${reality_domain_name} |cut -d: -f1)
 
