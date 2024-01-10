@@ -1,6 +1,6 @@
 /router/opt/etc/config.json*
 logs/*
-downloaded_binary/*/*.json
+downloaded_binary/**/*.json
 downloaded_binary/linux-amd64/geoip.dat
 downloaded_binary/linux-amd64/geoip-only-cn-private.dat
 downloaded_binary/linux-amd64/geosite.dat
