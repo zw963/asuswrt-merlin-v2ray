@@ -74,9 +74,10 @@ function apply_tproxy_rule () {
 
     # More details, see https://www.kernel.org/doc/Documentation/networking/tproxy.txt
 
-    # 下面两行代码，将使用 --tproxy-mark 0x01/0x01 标记过的 udp/tcp 数据包路由到本机回环接口
-    # 简介实现了类似于 redirect 的功能，而且同时对 tcp/udp 生效.
+    # 下面两行代码，将使用 --tproxy-mark 1 标记过的 udp/tcp 数据包路由到本机回环接口
+    # 间接实现了类似于 redirect 的功能，而且同时对 tcp/udp 生效.
     ip rule add fwmark 1 table 100
+    # local 是一个路由类型，指将网络包发给系统本地协议栈。
     ip route add local default dev lo table 100
 
     # step 3: 这个不会解释，反正知道和上面的 ip rule/route 一起，可以针对 tcp/udp 实现类似于 redirect 的功能。
