@@ -176,4 +176,8 @@ cp /opt/etc/update_geodata.sh /etc/cron.weekly/
 
 config_sysctl_for_proxy
 
+# 旁路由必须开启 ip_forward v4，否则主机无法使用 ssh
+sed -i 's/# net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.d/99-proxy.conf
+
 /opt/etc/patch_router && echo "Congratulations, [0m[33mDeploy succssful[0m!"
+echo 'Remember run `sysctl -w net.ipv4.ip_forward=1 && sysctl -p'
