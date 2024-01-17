@@ -267,7 +267,8 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "vidhub.tv",
                     "staticfile.org",
                     "www.naifei.im",
-                    "crystal-lang.org"
+                    "crystal-lang.org",
+                    "yzzy-online.com"
                 ]
             }
         ],
@@ -316,7 +317,8 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "vidhub.tv",
                     "staticfile.org",
                     "www.naifei.im",
-                    "crystal-lang.org"
+                    "crystal-lang.org",
+                    "yzzy-online.com"
                 ],
                 "outboundTag": "direct"
             },
