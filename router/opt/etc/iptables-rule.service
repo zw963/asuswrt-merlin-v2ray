@@ -1,6 +1,6 @@
 [Unit]
 Description=Iptables rule
-After=network.target
+After=network.target chronyd.service
 Wants=network.target
 
 [Service]
