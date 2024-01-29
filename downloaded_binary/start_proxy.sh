@@ -10,4 +10,4 @@ clean_up() {
 }
 
 $ROOT/linux-amd64/apply_iptables_rule.sh
-sudo $ROOT/linux-amd64/xray run -c $ROOT/config.json
+sudo $ROOT/linux-amd64/xray run -c $ROOT/${1-config.json}
