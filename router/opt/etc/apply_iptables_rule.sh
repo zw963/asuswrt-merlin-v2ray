@@ -88,8 +88,9 @@ function apply_tproxy_rule () {
     #     }
     # }
     # 来确保 V2Ray 可以识别这种流量。
-    iptables -t mangle -A V2RAY_UDP -p udp -j TPROXY --tproxy-mark 1 --on-port $local_v2ray_port
-    iptables -t mangle -A V2RAY_UDP -p tcp ! --dport 22 -j TPROXY --tproxy-mark 1 --on-port $local_v2ray_port
+    iptables -t mangle -A V2RAY_UDP -p udp -j TPROXY --on-ip 127.0.0.1 --on-port $local_v2ray_port --tproxy-mark 1
+    # 之前手贱, 这里加了一个 ! --dport 22, 等于 22 端口不设 tproxy mark, 造成 22 一定翻墙, 引起很多问题.
+    iptables -t mangle -A V2RAY_UDP -p tcp -j TPROXY --on-ip 127.0.0.1 --on-port $local_v2ray_port --tproxy-mark 1
 
     # step 4: V2Ray 内部处理，outbounds 的地方也设定为 255.
 
