@@ -271,13 +271,12 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "yzzy-online.com"
                 ]
             }
-        ],
+        ]
         // 默认为 false, 开启后，如果通过默认的 DNS 访问返回结果不匹配 cn site/ip,
         // 将使用 servers 里面的第一个，8.8.4.4 访问。
-        "disableFallback": true
+        // "disableFallback": true
     },
     "routing": {
-        "domainStrategy": "IPIfNonMatch",
         "rules": [
             {
                 // tproxy 透明代理必需。
@@ -286,23 +285,6 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                 "port": 53,
                 "network": "udp",
                 "outboundTag": "dns-outbound"
-            },
-            {
-                "type": "field",
-                "inboundTag": ["transparent"],
-                "port": "123,323",
-                "network": "udp",
-                "outboundTag": "direct"
-            },
-            {
-                "type": "field",
-                "ip": ["8.8.4.4"],
-                "outboundTag": "proxy"
-            },
-            {
-                "type": "field",
-                "ip": ["180.76.76.76"],
-                "outboundTag": "direct"
             },
             {
                 "type": "field",
@@ -324,11 +306,33 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
             },
             {
                 "type": "field",
+                "ip": ["180.76.76.76"],
+                "outboundTag": "direct"
+            },
+            {
+                "type": "field",
                 "ip": [
                     "ext:geoip-only-cn-private.dat:cn",
                     "ext:geoip-only-cn-private.dat:private"
                 ],
                 "outboundTag": "direct"
+            },
+            {
+                "type": "field",
+                "inboundTag": ["transparent"],
+                "port": "123,323",
+                "network": "udp",
+                "outboundTag": "direct"
+            },
+            { // BT 流量直连
+                "type": "field",
+                "protocol":["bittorrent"],
+                "outboundTag": "direct"
+            },
+            {
+                "type": "field",
+                "ip": ["8.8.4.4"],
+                "outboundTag": "proxy"
             },
             {
                 "type": "field",
