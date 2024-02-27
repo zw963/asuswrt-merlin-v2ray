@@ -61,12 +61,13 @@ function apply_tproxy_rule () {
     iptables -t mangle -N V2RAY_UDP
 
     # step 1: 所有针对本地地址、VPS 服务器地址的流量直连
-    iptables -t mangle -A V2RAY_UDP -d 127.0.0.0/8 -j RETURN
-    iptables -t mangle -A V2RAY_UDP -d $v2ray_server_ip -j RETURN
-
+    iptables -t mangle -A V2RAY_UDP -d 127.0.0.1/8 -j RETURN
+    iptables -t mangle -A V2RAY_UDP -d 172.0.0.0/8 -j RETURN # 这个似乎被 docker 内部使用, 使用容器必须
+    iptables -t mangle -A V2RAY_UDP -d 255.255.255.255 -j RETURN
     # step 2: 但是针对局域网地址，tcp 总是流量直连，局域网内目标地址是 53 的 udp 流量，则继续走代理。
     iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p tcp -j RETURN
     iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
+    iptables -t mangle -A V2RAY_UDP -d $v2ray_server_ip -j RETURN
 
     # step 5: 从 V2Ray 发出的流量，再次经过时 netfilter 时，如果是 V2Ray 标记过
     # 为 255 的流量，全部走直连.
@@ -106,19 +107,20 @@ function apply_gateway_rule () {
     iptables -t mangle -N V2RAY_MASK # 代理网关本机
 
     # step 1: 所有针对本地地址、VPS 服务器地址的流量直连
-    iptables -t mangle -A V2RAY_MASK -d 127.0.0.0/8 -j RETURN
-    iptables -t mangle -A V2RAY_MASK -d $v2ray_server_ip -j RETURN
-
-    # 避免影响时间同步服务
-    iptables -t mangle -A V2RAY_MASK -p udp --dport 123 -j RETURN
-    iptables -t mangle -A V2RAY_MASK -p udp --dport 323 -j RETURN
-
+    iptables -t mangle -A V2RAY_MASK -d 127.0.0.1/8 -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d 172.0.0.0/8 -j RETURN # 这个似乎被 docker 内部使用, 使用容器必须
+    iptables -t mangle -A V2RAY_MASK -d 255.255.255.255 -j RETURN
     # 这里不要瞎改成和上面 tproxy 一样，否则，（可能是因为 53 端口走代理），会造成旁路由重启后不会同步时间。
     # 但是只有让 UDP 53 走代理，才能避免来自网通路由器的 DNS 污染，只能先开启吧。
     # 如果是旁路由，记得替换下面两行为：iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -j RETURN
     # 来确保时间同步服务可以正常工作。
     iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p tcp -j RETURN
     iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d $v2ray_server_ip -j RETURN
+
+    # 避免影响时间同步服务
+    iptables -t mangle -A V2RAY_MASK -p udp --dport 123 -j RETURN
+    iptables -t mangle -A V2RAY_MASK -p udp --dport 323 -j RETURN
 
     # 直连 SO_MARK 为 0xff 的流量(0xff 是 16 进制数，数值上等同与上面V2Ray 配置的 255)，此规则目的是避免代理本机(网关)流量出现回环问题
     iptables -t mangle -A V2RAY_MASK -j RETURN -m mark --mark 0xff
