@@ -268,7 +268,11 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "staticfile.org",
                     "www.naifei.im",
                     "crystal-lang.org",
-                    "yzzy-online.com"
+                    "yzzy-online.com",
+                    "cjkypo.com",
+                    "gitlab.com",
+                    "www.gstatic.com",
+                    "archlinux.org"
                 ]
             }
         ]
@@ -300,7 +304,11 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "staticfile.org",
                     "www.naifei.im",
                     "crystal-lang.org",
-                    "yzzy-online.com"
+                    "yzzy-online.com",
+                    "cjkypo.com",
+                    "gitlab.com",
+                    "www.gstatic.com",
+                    "archlinux.org"
                 ],
                 "outboundTag": "direct"
             },
