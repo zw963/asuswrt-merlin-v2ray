@@ -177,7 +177,8 @@ if [ "$use_xtls" == "true" ]; then
     if [ -z "$old_reality_domain_name" ]; then
         # 使用 xray_server.json 中的默认配置，即: www.hko.gov.hk:443
         # 还可以选择香港运输署 www.td.gov.hk
-        # 要求: 1. HTTP/3 2. TLS 1.3+
+        # 韩国推荐 freegame.gg
+        # 要求: 1. HTTP/2+ 2. TLS 1.3+
         reality_domain_name=$(cat /etc/${service_name}/config.json |grep '"dest":' |cut -d':' -f2- |cut -d'"' -f2)
         client_server_name=$(echo ${reality_domain_name} |cut -d: -f1)
 
@@ -198,8 +199,9 @@ if [ "$use_xtls" == "true" ]; then
         key_pairs=$(/usr/local/bin/xray x25519)
         reality_private_key=$(echo "$key_pairs" |head -n1 |cut -d: -f2 |cut -d' ' -f2)
         reality_public_key=$(echo "$key_pairs" |tail -n1 |cut -d: -f2 |cut -d' ' -f2)
-
     else
+        echo "Use exists x25519 key pairs ..."
+
         reality_private_key=$old_reality_private_key
         reality_public_key=$(/usr/local/bin/xray x25519 -i $reality_private_key |tail -n1 |cut -d: -f2 |cut -d' ' -f2)
     fi
@@ -272,7 +274,8 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "yzzy-online.com",
                     "cjkypo.com",
                     "gitlab.com",
-                    "www.gstatic.com",
+                    "fonts.gstatic.com",
+                    "fonts.googleapis.com",
                     "archlinux.org"
                 ]
             }
@@ -308,7 +311,8 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "yzzy-online.com",
                     "cjkypo.com",
                     "gitlab.com",
-                    "www.gstatic.com",
+                    "fonts.gstatic.com",
+                    "fonts.googleapis.com",
                     "archlinux.org"
                 ],
                 "outboundTag": "direct"
