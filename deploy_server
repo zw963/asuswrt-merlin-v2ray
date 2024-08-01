@@ -1,6 +1,7 @@
 #!/bin/sh
 
-self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.9/deploy_start.sh)" && eval "$self"
+self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.10/deploy_start.sh)" && eval "$self"
+# self="$(cat /home/common/Project/deployment_bash/deploy_start.sh)" && eval "$self"
 
 export_variable use_xtls="${use_xtls-true}"
 
@@ -17,6 +18,9 @@ export_variable old_uuid=$(ssh $target cat /etc/${service_name}/config.json 2>/d
 export_variable old_port=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep -A3 -B3 '"protocol":\s*"vless\|vmess"' |grep port |grep -o '[0-9]*')
 export_variable old_reality_domain_name=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"dest":' |cut -d':' -f2- |cut -d'"' -f2)
 export_variable old_reality_private_key=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"privateKey":' |cut -d: -f2- |cut -d'"' -f2)
+export_variable old_ss_port=$(ssh $target cat /etc/${service_name}/config.json |grep '"protocol": "shadowsocks"' -A3 |grep port |grep -o '[0-9]*')
+export_variable old_ss_method=$(ssh $target cat /etc/${service_name}/config.json |grep '"protocol": "shadowsocks"' -A5 |grep method |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#')
+export_variable old_ss_password=$(ssh $target cat /etc/${service_name}/config.json |grep '"protocol": "shadowsocks"' -A5 |grep password |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#')
 export_variable arch=${router_arch-linux-arm32-v5}
 
 cat <<HEREDOC
@@ -31,7 +35,7 @@ function postinstall () {
     mkdir -p ./downloaded_binary/linux-amd64/services ./downloaded_binary/${arch}
     echo
     echo 'Please wait copy generated client config into local machine ...'
-    scp  $target:/etc/$service_name/client_config.json ./downloaded_binary/linux-amd64/config.json
+    scp  $target:/etc/$service_name/client_config.json ./downloaded_binary/linux-amd64/client_config.json
     scp  $target:/usr/local/bin/{geoip-only-cn-private.dat,geoip.dat,geosite.dat,xray,v2ray} ./downloaded_binary/linux-amd64/
     scp  $target:/etc/systemd/system/{v2ray.service,v2ray@.service} ./downloaded_binary/linux-amd64/services/
     cp router/opt/etc/{apply_iptables_rule.sh,clean_iptables_rule.sh,update_geodata.sh} ./downloaded_binary/linux-amd64/
@@ -159,15 +163,34 @@ replace_string 'NEWUUID' "${uuid}" /etc/${service_name}/config.json
 
 # quic_key=$(uuidgen | sed 's/[-]//g' | head -c 20)
 
-if ! [ -z "$old_port" ]; then
-    replace_multiline1 '("protocal":\s*"vless",.*?)"port":\s*[0-9]*,' '$1"port":'" $old_port" /etc/${service_name}/config.json
+if [ -n "$old_port" ]; then
+    replace_multiline1 '("protocal":\s*"vless",.*?)"port":\s*[0-9]*,' '$1"port":'" ${old_port}" /etc/${service_name}/config.json
+    v2ray_port=$old_port
+else
+    v2ray_port=$(cat /etc/$service_name/config.json |grep '"inbounds"' -A10 |grep '"protocol" *: *"\(vmess\|vless\)"' -A3 |grep '"port"' |grep -o '[0-9]*')
 fi
 
-# replace_string 'QUIC_KEY' "${quic_key}" /etc/${service_name}/config.json
+if [ -n "$old_ss_port" ]; then
+    replace_multiline1 '("protocol": "shadowsocks",.*"port": )\d+' '${1}'"${old_ss_port}" /etc/${service_name}/config.json
+    ss_port=$old_ss_port
+else
+    ss_port=$(cat /etc/${service_name}/config.json 2>/dev/null |grep -A3 -B3 '"protocol":\s*"vless\|vmess"' |grep port |grep -o '[0-9]*')
+fi
 
-# 生成的密钥长度与 2022-blake3-chacha20-poly1305 2022-blake3-aes-256-gcm 兼容
-ss_password=$(openssl rand -base64 32)
-replace_string 'SSPASS' "${ss_password}" /etc/${service_name}/config.json
+if [ -n "$old_ss_method" ]; then
+    replace_regex1 '"method": ".*"' "\"method\": \"${old_ss_method}\"" /etc/${service_name}/config.json
+    ss_method=$old_ss_method
+else
+    ss_method=$(cat /etc/${service_name}/config.json |grep '"protocol": "shadowsocks"' -A5 |grep method |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#')
+fi
+
+if [[ -n "$old_ss_password" ]] && [[ "$old_ss_password" != "SSPASS" ]]; then
+    replace_regex1 '"password": ".*"' "\"password\": \"${old_ss_password}\"" /etc/${service_name}/config.json
+    ss_password=$old_ss_password
+else
+    # 生成的密钥长度与 2022-blake3-chacha20-poly1305 2022-blake3-aes-256-gcm 兼容
+    ss_password=$(openssl rand -base64 32)
+fi
 
 config_sysctl_for_proxy
 
@@ -188,23 +211,26 @@ if [ "$use_xtls" == "true" ]; then
         reality_domain_name=$old_reality_domain_name
         client_server_name=$(echo ${reality_domain_name} |cut -d: -f1)
 
-        replace_string '"dest": "www.hko.gov.hk:443"' "\"dest\": \"${reality_domain_name}\"" /etc/${service_name}/config.json
-        replace_string '"serverNames": ["www.hko.gov.hk"]' "\"serverNames\": [\"${client_server_name}\"]" /etc/${service_name}/config.json
+        echo "Using exists reality domain name ${old_reality_domain_name}..."
+
+        replace_regex1 '"dest": ".*"' "\"dest\": \"${reality_domain_name}\"" /etc/${service_name}/config.json
+        replace_regex '"serverNames": \[".*"\]' "\"serverNames\": [\"${client_server_name}\"]" /etc/${service_name}/config.json
     fi
 
-    if [ -z "$old_reality_private_key" ]; then
+    if [ -n "$old_reality_private_key" ] && [[ "$old_reality_private_key" != "REALITY_PRIVATE_KEY_HERE" ]]; then
+        echo "Use exists x25519 key pairs ..."
+
+        reality_private_key=$old_reality_private_key
+        reality_public_key=$(/usr/local/bin/xray x25519 -i $reality_private_key |tail -n1 |cut -d: -f2 |cut -d' ' -f2)
+    else
         # 重新生成
         echo "Geneate new x25519 key pairs ..."
 
         key_pairs=$(/usr/local/bin/xray x25519)
         reality_private_key=$(echo "$key_pairs" |head -n1 |cut -d: -f2 |cut -d' ' -f2)
         reality_public_key=$(echo "$key_pairs" |tail -n1 |cut -d: -f2 |cut -d' ' -f2)
-    else
-        echo "Use exists x25519 key pairs ..."
-
-        reality_private_key=$old_reality_private_key
-        reality_public_key=$(/usr/local/bin/xray x25519 -i $reality_private_key |tail -n1 |cut -d: -f2 |cut -d' ' -f2)
     fi
+
 
     replace_string 'REALITY_PRIVATE_KEY_HERE' "$reality_private_key" /etc/${service_name}/config.json
 fi
@@ -215,12 +241,6 @@ fi
 systemctl restart $service_name
 systemctl status $service_name
 systemctl enable $service_name
-
-# 从 server config.json 来获取必须的一些信息.
-v2ray_port=$(cat /etc/$service_name/config.json |grep '"inbounds"' -A10 |grep '"protocol" *: *"\(vmess\|vless\)"' -A3 |grep '"port"' |grep -o '[0-9]*')
-ss_port=$(cat /etc/$service_name/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A3 |grep '"port"' |grep -o '[0-9]*')
-ss_encrypt_method=$(cat /etc/$service_name/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"method"'|cut -d':' -f2|cut -d'"' -f2)
-# ss_password=$(cat /etc/$service_name/config.json |grep '"inbounds"' -A100 |grep '"protocol" *: *"shadowsocks"' -A10 |grep '"password"'|cut -d':' -f2|cut -d'"' -f2)
 
 expose_port $v2ray_port
 expose_port $ss_port
@@ -256,6 +276,15 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                 ]
             },
             {
+                "address": "8.8.4.4",
+                "port": 53,
+                "domains": [
+                    "services.googleapis.cn",
+                    "googleapis.com",
+                    "xn--ngstr-lra8j.com"
+                ]
+            },
+            {
                 // fakeDNS 必须，否则会被解析为 fake IP.
                 // 注意，某些视频网站视频无法播放，貌似就是因为访问网站时，
                 // 解析到错误的 IP 地址。
@@ -276,6 +305,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "gitlab.com",
                     "fonts.gstatic.com",
                     "fonts.googleapis.com",
+                    "scootersoftware.com",
                     "archlinux.org"
                 ]
             }
@@ -313,6 +343,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "gitlab.com",
                     "fonts.gstatic.com",
                     "fonts.googleapis.com",
+                    "scootersoftware.com",
                     "archlinux.org"
                 ],
                 "outboundTag": "direct"
@@ -353,7 +384,10 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     // 这里添加必须走 proxy 的域名例外.
                     // "services.googleapis.cn",
                     "raw.githubusercontent.com",
-                    "github.githubassets.com"
+                    "github.githubassets.com",
+                    "services.googleapis.cn",
+                    "googleapis.com",
+                    "xn--ngstr-lra8j.com"
                 ],
                 "outboundTag": "proxy"
             },
@@ -437,9 +471,9 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                                 "flow": "xtls-rprx-vision",
                                 "id": "$uuid"  // 用户 ID，必须与服务器端配置相同
                             }
-                        ]
+                            ]
                     }
-                ]
+                    ]
             },
             "streamSettings": {
                 "network": "tcp",
@@ -464,7 +498,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                 "servers": [
                     {
                         "address": "$targetip", // Shadowsocks 的服务器地址
-                        "method": "$ss_encrypt_method", // Shadowsocks 的加密方式
+                        "method": "$ss_method", // Shadowsocks 的加密方式
                         "password": "$ss_password", // Shadowsocks 的密码
                         "port": $ss_port
                     }
@@ -512,7 +546,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                 }
             }
         }
-    ],
+        ],
     "policy": {
         "levels": {
             "0": {

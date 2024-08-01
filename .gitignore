@@ -10,5 +10,8 @@ downloaded_binary/linux-amd64/*.old
 downloaded_binary/linux-amd64/apply_iptables_rule.sh
 downloaded_binary/linux-amd64/clean_iptables_rule.sh
 downloaded_binary/linux-amd64/update_geodata.sh
+downloaded_binary/linux-amd64/LICENSE
+downloaded_binary/linux-amd64/README.md
+downloaded_binary/linux-amd64/Xray-linux-64.zip
 downloaded_binary/linux-arm*
 downloaded_binary/*.bak
