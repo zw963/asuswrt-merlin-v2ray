@@ -24,8 +24,8 @@
                 "network": "tcp",
                 "security": "reality",
                 "realitySettings": {
-                    "dest": "www.hko.gov.hk:443",
-                    "serverNames": ["www.hko.gov.hk"],
+                    "dest": "freegame.gg:443",
+                    "serverNames": ["freegame.gg"],
                     "privateKey": "REALITY_PRIVATE_KEY_HERE",
                     "shortIds": [""]
                 }
