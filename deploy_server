@@ -263,6 +263,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
             // V2Ray 会使用 DNS over HTTPS (RFC8484, 简称DOH) 进行查询。
             // DoH 默认走第一个 outbound 来查询 （DoH 域名需要在 hosts 中指定 IP 地址）
             "8.8.4.4",
+	    "1.1.1.1",
             {
                 // 180.76.76.76 是百度的 DNS，你可以替换为当地运营商的
                 // 这里之前是 localhost, 造成了死循环，严重影响访问国内网站的性能。
@@ -281,7 +282,9 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                 "domains": [
                     "services.googleapis.cn",
                     "googleapis.com",
-                    "xn--ngstr-lra8j.com"
+                    "gstatic.com",
+                    "xn--ngstr-lra8j.com",
+                    "googleusercontent.com"
                 ]
             },
             {
@@ -306,13 +309,15 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "fonts.gstatic.com",
                     "fonts.googleapis.com",
                     "scootersoftware.com",
-                    "archlinux.org"
+                    "archlinux.org",
+                    "woaimoon.net",
+		    "bing.com"
                 ]
             }
-        ]
+        ],
         // 默认为 false, 开启后，如果通过默认的 DNS 访问返回结果不匹配 cn site/ip,
         // 将使用 servers 里面的第一个，8.8.4.4 访问。
-        // "disableFallback": true
+        "disableFallback": true
     },
     "routing": {
         "rules": [
@@ -344,7 +349,9 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "fonts.gstatic.com",
                     "fonts.googleapis.com",
                     "scootersoftware.com",
-                    "archlinux.org"
+                    "archlinux.org",
+                    "woaimoon.net",
+		    "bing.com"
                 ],
                 "outboundTag": "direct"
             },
