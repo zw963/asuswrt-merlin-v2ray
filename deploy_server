@@ -162,7 +162,7 @@ else
     uuid=$(cat /proc/sys/kernel/random/uuid)
 fi
 
-replace_string 'NEWUUID' "${uuid}" /etc/${service_name}/config.json
+replace_string1 'NEWUUID' "${uuid}" /etc/${service_name}/config.json
 
 # quic_key=$(uuidgen | sed 's/[-]//g' | head -c 20)
 
@@ -188,12 +188,14 @@ else
 fi
 
 if [[ -n "$old_ss_password" ]] && [[ "$old_ss_password" != "SSPASS" ]]; then
-    replace_regex1 '"password": ".*"' "\"password\": \"${old_ss_password}\"" /etc/${service_name}/config.json
     ss_password=$old_ss_password
+    # replace_regex1 '"password": ".*"' "\"password\": \"${ss_password}\"" /etc/${service_name}/config.json
 else
     # 生成的密钥长度与 2022-blake3-chacha20-poly1305 2022-blake3-aes-256-gcm 兼容
     ss_password=$(openssl rand -base64 32)
 fi
+
+replace_string1 'SSPASS' "$ss_password" /etc/${service_name}/config.json
 
 config_sysctl_for_proxy
 
