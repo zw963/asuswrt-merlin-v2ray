@@ -316,7 +316,8 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "scootersoftware.com",
                     "archlinux.org",
                     "woaimoon.net",
-		    "bing.com"
+		    "bing.com",
+                    "cloudflare.com"
                 ]
             }
         ],
@@ -356,7 +357,8 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "scootersoftware.com",
                     "archlinux.org",
                     "woaimoon.net",
-		    "bing.com"
+                    "bing.com",
+                    "cloudflare.com"
                 ],
                 "outboundTag": "direct"
             },
@@ -387,7 +389,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
             },
             {
                 "type": "field",
-                "ip": ["8.8.4.4"],
+                "ip": ["8.8.4.4","1.1.1.1"],
                 "outboundTag": "proxy"
             },
             {
