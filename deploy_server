@@ -32,20 +32,23 @@ HEREDOC
 
 function postinstall () {
     set -u
-    mkdir -p ./downloaded_binary/linux-amd64/services ./downloaded_binary/${arch}
+    local linux=./downloaded_binary/linux-amd64
+
+    mkdir -p $linux/services ./downloaded_binary/${arch}
     echo
-    echo 'Please wait copy generated client config into local machine ...'
-    scp  $target:/etc/$service_name/client_config.json ./downloaded_binary/linux-amd64/client_config.json
-    scp  $target:/usr/local/bin/{geoip-only-cn-private.dat,geoip.dat,geosite.dat,xray,v2ray} ./downloaded_binary/linux-amd64/
-    scp  $target:/etc/systemd/system/{v2ray.service,v2ray@.service} ./downloaded_binary/linux-amd64/services/
-    cp router/opt/etc/{apply_iptables_rule.sh,clean_iptables_rule.sh,update_geodata.sh} ./downloaded_binary/linux-amd64/
+    echo 'Please wait copy generated client config into local $linux ...'
+    scp  $target:/etc/$service_name/client_config.json $linux/client_config.json
+    scp  $target:/etc/$service_name/config.json $linux/server_config.json
+    scp  $target:/usr/local/bin/{geoip-only-cn-private.dat,geoip.dat,geosite.dat,xray,v2ray} $linux/
+    scp  $target:/etc/systemd/system/{v2ray.service,v2ray@.service} $linux/services/
+    cp router/opt/etc/{apply_iptables_rule.sh,clean_iptables_rule.sh,update_geodata.sh} $linux/
 
     (
-        cd ./downloaded_binary/linux-amd64/
+        cd $linux/
         chmod +x apply_iptables_rule.sh clean_iptables_rule.sh update_geodata.sh xray v2ray
     )
 
-    cp ./downloaded_binary/linux-amd64/{geoip-only-cn-private.dat,geoip.dat,geosite.dat,config.json} ./downloaded_binary/${arch}/
+    cp $linux/{geoip-only-cn-private.dat,geoip.dat,geosite.dat,config.json} ./downloaded_binary/${arch}/
     scp  $target:/tmp/v2ray-clients/{xray,v2ray} ./downloaded_binary/${arch}/
 
     echo "Run [0m[33m./deploy_router admin@router_ip[0m to deploy to router."
@@ -553,7 +556,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                 }
             }
         }
-        ],
+    ],
     "policy": {
         "levels": {
             "0": {
