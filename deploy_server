@@ -18,9 +18,9 @@ export_variable old_uuid=$(ssh $target cat /etc/${service_name}/config.json 2>/d
 export_variable old_port=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep -A3 -B3 '"protocol":\s*"vless\|vmess"' |grep port |grep -o '[0-9]*')
 export_variable old_reality_domain_name=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"dest":' |cut -d':' -f2- |cut -d'"' -f2)
 export_variable old_reality_private_key=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"privateKey":' |cut -d: -f2- |cut -d'"' -f2)
-export_variable old_ss_port=$(ssh $target cat /etc/${service_name}/config.json |grep '"protocol": "shadowsocks"' -A3 |grep port |grep -o '[0-9]*')
-export_variable old_ss_method=$(ssh $target cat /etc/${service_name}/config.json |grep '"protocol": "shadowsocks"' -A5 |grep method |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#')
-export_variable old_ss_password=$(ssh $target cat /etc/${service_name}/config.json |grep '"protocol": "shadowsocks"' -A5 |grep password |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#')
+export_variable old_ss_port=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"protocol": "shadowsocks"' -A3 |grep port |grep -o '[0-9]*')
+export_variable old_ss_method=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"protocol": "shadowsocks"' -A5 |grep method |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#')
+export_variable old_ss_password=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"protocol": "shadowsocks"' -A5 |grep password |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#')
 export_variable arch=${router_arch-linux-arm32-v5}
 
 cat <<HEREDOC
