@@ -1,7 +1,7 @@
 #!/bin/sh
 
-self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.10/deploy_start.sh)" && eval "$self"
-# self="$(cat /home/common/Project/deployment_bash/deploy_start.sh)" && eval "$self"
+# self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.10/deploy_start.sh)" && eval "$self"
+self="$(cat /home/common/Project/deployment_bash/deploy_start.sh)" && eval "$self"
 
 export_variable use_xtls="${use_xtls-true}"
 
@@ -14,13 +14,37 @@ else
 fi
 
 export_variable target=$1
+
+export_variable check_ss_port=$(cat <<HEREDOC
+cat /etc/${service_name}/config.json 2>/dev/null |grep '"protocol": "shadowsocks"' -A3 |grep port |grep -o '[0-9]*'
+HEREDOC
+                )
+
+export_variable check_ss_method=$(cat <<HEREDOC
+    cat /etc/${service_name}/config.json 2>/dev/null |grep '"protocol": "shadowsocks"' -A5 |grep method |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#'
+HEREDOC
+                )
+
+export_variable check_port=$(cat <<HEREDOC
+cat /etc/${service_name}/config.json 2>/dev/null |grep -A3 -B3 '"protocol":\s*"\(vmess\|vless\)"' |grep '"port"' |grep -o '[0-9]*'
+HEREDOC
+                )
+
+export_variable check_reality_domain_name=$(cat <<HEREDOC
+cat /etc/${service_name}/config.json 2>/dev/null |grep '"dest":' |cut -d: -f2- |cut -d'"' -f2
+HEREDOC
+                )
+
+# those config will fetch the default value from server config.
+export_variable old_port=$(ssh $target "$check_port")
+export_variable old_ss_port=$(ssh $target "$check_ss_port")
+export_variable old_ss_method=$(ssh $target "$check_ss_method")
+export_variable old_reality_domain_name=$(ssh $target <<< "$check_reality_domain_name")
+
+# those config will generated new config instead if not exists old config.
 export_variable old_uuid=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"flow": "xtls-rprx' -A5 -B5 |grep '"id":' |cut -d: -f2 |cut -d'"' -f2)
-export_variable old_port=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep -A3 -B3 '"protocol":\s*"vless\|vmess"' |grep port |grep -o '[0-9]*')
-export_variable old_reality_domain_name=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"dest":' |cut -d':' -f2- |cut -d'"' -f2)
-export_variable old_reality_private_key=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"privateKey":' |cut -d: -f2- |cut -d'"' -f2)
-export_variable old_ss_port=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"protocol": "shadowsocks"' -A3 |grep port |grep -o '[0-9]*')
-export_variable old_ss_method=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"protocol": "shadowsocks"' -A5 |grep method |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#')
 export_variable old_ss_password=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"protocol": "shadowsocks"' -A5 |grep password |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#')
+export_variable old_reality_private_key=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"privateKey":' |cut -d: -f2- |cut -d'"' -f2)
 export_variable arch=${router_arch-linux-arm32-v5}
 
 cat <<HEREDOC
@@ -161,7 +185,6 @@ if [ "$old_uuid" != NEWUUID ]; then
 else
     uuid=$(cat /proc/sys/kernel/random/uuid)
 fi
-
 replace_string1 'NEWUUID' "${uuid}" /etc/${service_name}/config.json
 
 # quic_key=$(uuidgen | sed 's/[-]//g' | head -c 20)
@@ -170,21 +193,21 @@ if [ -n "$old_port" ]; then
     replace_multiline1 '("protocal":\s*"vless",.*?)"port":\s*[0-9]*,' '$1"port":'" ${old_port}" /etc/${service_name}/config.json
     v2ray_port=$old_port
 else
-    v2ray_port=$(cat /etc/$service_name/config.json |grep '"inbounds"' -A10 |grep '"protocol" *: *"\(vmess\|vless\)"' -A3 |grep '"port"' |grep -o '[0-9]*')
+    v2ray_port=$($check_port)
 fi
 
 if [ -n "$old_ss_port" ]; then
     replace_multiline1 '("protocol": "shadowsocks",.*"port": )\d+' '${1}'"${old_ss_port}" /etc/${service_name}/config.json
     ss_port=$old_ss_port
 else
-    ss_port=$(cat /etc/${service_name}/config.json 2>/dev/null |grep -A3 -B3 '"protocol":\s*"vless\|vmess"' |grep port |grep -o '[0-9]*')
+    ss_port=$($check_ss_port)
 fi
 
 if [ -n "$old_ss_method" ]; then
     replace_regex1 '"method": ".*"' "\"method\": \"${old_ss_method}\"" /etc/${service_name}/config.json
     ss_method=$old_ss_method
 else
-    ss_method=$(cat /etc/${service_name}/config.json |grep '"protocol": "shadowsocks"' -A5 |grep method |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#')
+    ss_method=$($check_ss_method)
 fi
 
 if [[ -n "$old_ss_password" ]] && [[ "$old_ss_password" != "SSPASS" ]]; then
@@ -194,7 +217,6 @@ else
     # 生成的密钥长度与 2022-blake3-chacha20-poly1305 2022-blake3-aes-256-gcm 兼容
     ss_password=$(openssl rand -base64 32)
 fi
-
 replace_string1 'SSPASS' "$ss_password" /etc/${service_name}/config.json
 
 config_sysctl_for_proxy
@@ -207,7 +229,7 @@ if [ "$use_xtls" == "true" ]; then
         # 还可以选择香港运输署 www.td.gov.hk
         # 韩国推荐 freegame.gg
         # 要求: 1. HTTP/2+ 2. TLS 1.3+
-        reality_domain_name=$(cat /etc/${service_name}/config.json |grep '"dest":' |cut -d':' -f2- |cut -d'"' -f2)
+        reality_domain_name=$($check_reality_domain_name)
         client_server_name=$(echo ${reality_domain_name} |cut -d: -f1)
 
         echo "reality domain name use ${reality_domain_name}"
@@ -235,8 +257,6 @@ if [ "$use_xtls" == "true" ]; then
         reality_private_key=$(echo "$key_pairs" |head -n1 |cut -d: -f2 |cut -d' ' -f2)
         reality_public_key=$(echo "$key_pairs" |tail -n1 |cut -d: -f2 |cut -d' ' -f2)
     fi
-
-
     replace_string 'REALITY_PRIVATE_KEY_HERE' "$reality_private_key" /etc/${service_name}/config.json
 fi
 
@@ -268,7 +288,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
             // V2Ray 会使用 DNS over HTTPS (RFC8484, 简称DOH) 进行查询。
             // DoH 默认走第一个 outbound 来查询 （DoH 域名需要在 hosts 中指定 IP 地址）
             "8.8.4.4",
-	    "1.1.1.1",
+            "1.1.1.1",
             {
                 // 180.76.76.76 是百度的 DNS，你可以替换为当地运营商的
                 // 这里之前是 localhost, 造成了死循环，严重影响访问国内网站的性能。
@@ -316,7 +336,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "scootersoftware.com",
                     "archlinux.org",
                     "woaimoon.net",
-		    "bing.com",
+                    "bing.com",
                     "cloudflare.com"
                 ]
             }
