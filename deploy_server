@@ -15,38 +15,6 @@ fi
 
 export_variable target=$1
 
-export_variable check_ss_port=$(cat <<HEREDOC
-cat /etc/${service_name}/config.json 2>/dev/null |grep '"protocol": "shadowsocks"' -A3 |grep port |grep -o '[0-9]*'
-HEREDOC
-                )
-
-export_variable check_ss_method=$(cat <<HEREDOC
-    cat /etc/${service_name}/config.json 2>/dev/null |grep '"protocol": "shadowsocks"' -A5 |grep method |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#'
-HEREDOC
-                )
-
-export_variable check_port=$(cat <<HEREDOC
-cat /etc/${service_name}/config.json 2>/dev/null |grep -A3 -B3 '"protocol":\s*"\(vmess\|vless\)"' |grep '"port"' |grep -o '[0-9]*'
-HEREDOC
-                )
-
-export_variable check_reality_domain_name=$(cat <<HEREDOC
-cat /etc/${service_name}/config.json 2>/dev/null |grep '"dest":' |cut -d: -f2- |cut -d'"' -f2
-HEREDOC
-                )
-
-# those config will fetch the default value from server config.
-export_variable old_port=$(ssh $target "$check_port")
-export_variable old_ss_port=$(ssh $target "$check_ss_port")
-export_variable old_ss_method=$(ssh $target "$check_ss_method")
-export_variable old_reality_domain_name=$(ssh $target <<< "$check_reality_domain_name")
-
-# those config will generated new config instead if not exists old config.
-export_variable old_uuid=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"flow": "xtls-rprx' -A5 -B5 |grep '"id":' |cut -d: -f2 |cut -d'"' -f2)
-export_variable old_ss_password=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"protocol": "shadowsocks"' -A5 |grep password |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#')
-export_variable old_reality_private_key=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"privateKey":' |cut -d: -f2- |cut -d'"' -f2)
-export_variable arch=${router_arch-linux-arm32-v5}
-
 cat <<HEREDOC
 Set \$router_arch env to e.g. \`linux-arm32-v5/' if you want deploy to an asuswrt merlin AC5300 router.
 For the correct Arch name, check https://github.com/XTLS/Xray-core/releases assets.
@@ -96,6 +64,38 @@ if [ "${service_name}" == xray ]; then
     copy downloaded_binary/linux-amd64/services/xray.service /etc/systemd/system/xray.service
     copy downloaded_binary/linux-amd64/services/xray@.service /etc/systemd/system/xray@.service
 fi
+
+export_variable check_ss_port=$(cat <<HEREDOC
+cat /etc/${service_name}/config.json 2>/dev/null |grep '"protocol": "shadowsocks"' -A3 |grep port |grep -o '[0-9]*'
+HEREDOC
+                )
+
+export_variable check_ss_method=$(cat <<HEREDOC
+    cat /etc/${service_name}/config.json 2>/dev/null |grep '"protocol": "shadowsocks"' -A5 |grep method |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#'
+HEREDOC
+                )
+
+export_variable check_port=$(cat <<HEREDOC
+cat /etc/${service_name}/config.json 2>/dev/null |grep -A3 -B3 '"protocol":\s*"\(vmess\|vless\)"' |grep '"port"' |grep -o '[0-9]*'
+HEREDOC
+                )
+
+export_variable check_reality_domain_name=$(cat <<HEREDOC
+cat /etc/${service_name}/config.json 2>/dev/null |grep '"dest":' |cut -d: -f2- |cut -d'"' -f2
+HEREDOC
+                )
+
+# those config will fetch the default value from server config.
+export_variable old_port=$(ssh $target "$check_port")
+export_variable old_ss_port=$(ssh $target "$check_ss_port")
+export_variable old_ss_method=$(ssh $target "$check_ss_method")
+export_variable old_reality_domain_name=$(ssh $target <<< "$check_reality_domain_name")
+
+# those config will generated new config instead if not exists old config.
+export_variable old_uuid=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"flow": "xtls-rprx' -A5 -B5 |grep '"id":' |cut -d: -f2 |cut -d'"' -f2)
+export_variable old_ss_password=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"protocol": "shadowsocks"' -A5 |grep password |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#')
+export_variable old_reality_private_key=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"privateKey":' |cut -d: -f2- |cut -d'"' -f2)
+export_variable arch=${router_arch-linux-arm32-v5}
 
 deploy_start
 
