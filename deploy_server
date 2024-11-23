@@ -299,7 +299,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                 "address": "180.76.76.76",
                 "port": 53,
                 "domains": [
-                    "geosite:cn"
+                    "geosite:geolocation-cn"
                 ],
                 "expectIPs": [
                     "ext:geoip-only-cn-private.dat:cn"
@@ -363,7 +363,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                 "type": "field",
                 "domain": [
                     // 这里添加域名白名单.
-                    "geosite:cn",
+                    "geosite:geolocation-cn",
                     "router.asus.com",
                     "arch.pool.ntp.org",
                     "dl.google.com",
@@ -420,12 +420,13 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                 "type": "field",
                 "domain": [
                     // 这里添加必须走 proxy 的域名例外.
-                    // "services.googleapis.cn",
-                    "raw.githubusercontent.com",
-                    "github.githubassets.com",
                     "services.googleapis.cn",
                     "googleapis.com",
-                    "xn--ngstr-lra8j.com"
+                    "gstatic.com",
+                    "xn--ngstr-lra8j.com",
+                    "googleusercontent.com",
+                    "raw.githubusercontent.com",
+                    "github.githubassets.com"
                 ],
                 "outboundTag": "proxy"
             },
