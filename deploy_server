@@ -56,9 +56,9 @@ function postinstall () {
 # password=$(cat ${service_name}_server.json |grep '"password"' |cut -d':' -f2 |cut -d'"' -f2)
 # sed -i "s#change_yours_password_here#${password}#" "${another_service_name}_server.json"
 
-
-ssh $target "[ -e /etc/${service_name}/config.json ] && cp -a /etc/${service_name}/config.json /etc/${service_name}/config.json.$(date '+%Y-%m-%d_%H:%M:%S')"
-copy ${service_name}_server.json /etc/${service_name}/config.json
+export_variable orig_config=/etc/${service_name}/config.json
+ssh $target "[ -e ${orig_config} ] && cp -a ${orig_config} ${orig_config}.$(date '+%Y-%m-%d_%H:%M:%S')"
+copy_i ${service_name}_server.json ${orig_config}
 
 if [ "${service_name}" == xray ]; then
     copy downloaded_binary/linux-amd64/services/xray.service /etc/systemd/system/xray.service
@@ -66,35 +66,37 @@ if [ "${service_name}" == xray ]; then
 fi
 
 export_variable check_ss_port=$(cat <<HEREDOC
-cat /etc/${service_name}/config.json 2>/dev/null |grep '"protocol": "shadowsocks"' -A3 |grep port |grep -o '[0-9]*'
+cat ${orig_config} 2>/dev/null |grep '"protocol": "shadowsocks"' -A3 |grep port |grep -o '[0-9]*'
 HEREDOC
                 )
 
 export_variable check_ss_method=$(cat <<HEREDOC
-    cat /etc/${service_name}/config.json 2>/dev/null |grep '"protocol": "shadowsocks"' -A5 |grep method |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#'
+    cat ${orig_config} 2>/dev/null |grep '"protocol": "shadowsocks"' -A5 |grep method |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#'
 HEREDOC
                 )
 
 export_variable check_port=$(cat <<HEREDOC
-cat /etc/${service_name}/config.json 2>/dev/null |grep -A3 -B3 '"protocol":\s*"\(vmess\|vless\)"' |grep '"port"' |grep -o '[0-9]*'
+cat ${orig_config} 2>/dev/null |grep -A3 -B3 '"protocol":\s*"\(vmess\|vless\)"' |grep '"port"' |grep -o '[0-9]*'
 HEREDOC
                 )
 
 export_variable check_reality_domain_name=$(cat <<HEREDOC
-cat /etc/${service_name}/config.json 2>/dev/null |grep '"dest":' |cut -d: -f2- |cut -d'"' -f2
+cat ${orig_config} 2>/dev/null |grep '"dest":' |cut -d: -f2- |cut -d'"' -f2
 HEREDOC
                 )
+
+
 
 # those config will fetch the default value from server config.
 export_variable old_port=$(ssh $target "$check_port")
 export_variable old_ss_port=$(ssh $target "$check_ss_port")
 export_variable old_ss_method=$(ssh $target "$check_ss_method")
-export_variable old_reality_domain_name=$(ssh $target <<< "$check_reality_domain_name")
+export_variable old_reality_domain_name=$(ssh $target "$check_reality_domain_name")
 
 # those config will generated new config instead if not exists old config.
-export_variable old_uuid=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"flow": "xtls-rprx' -A5 -B5 |grep '"id":' |cut -d: -f2 |cut -d'"' -f2)
-export_variable old_ss_password=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"protocol": "shadowsocks"' -A5 |grep password |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#')
-export_variable old_reality_private_key=$(ssh $target cat /etc/${service_name}/config.json 2>/dev/null |grep '"privateKey":' |cut -d: -f2- |cut -d'"' -f2)
+export_variable old_uuid=$(ssh $target cat ${orig_config} 2>/dev/null |grep '"flow": "xtls-rprx' -A5 -B5 |grep '"id":' |cut -d: -f2 |cut -d'"' -f2)
+export_variable old_ss_password=$(ssh $target cat ${orig_config} 2>/dev/null |grep '"protocol": "shadowsocks"' -A5 |grep password |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#')
+export_variable old_reality_private_key=$(ssh $target cat ${orig_config} 2>/dev/null |grep '"privateKey":' |cut -d: -f2- |cut -d'"' -f2)
 export_variable arch=${router_arch-linux-arm32-v5}
 
 deploy_start
@@ -185,26 +187,26 @@ if [ "$old_uuid" != NEWUUID ]; then
 else
     uuid=$(cat /proc/sys/kernel/random/uuid)
 fi
-replace_string1 'NEWUUID' "${uuid}" /etc/${service_name}/config.json
+replace_string1 'NEWUUID' "${uuid}" ${orig_config}
 
 # quic_key=$(uuidgen | sed 's/[-]//g' | head -c 20)
 
 if [ -n "$old_port" ]; then
-    replace_multiline1 '("protocal":\s*"vless",.*?)"port":\s*[0-9]*,' '$1"port":'" ${old_port}" /etc/${service_name}/config.json
+    replace_multiline1 '("protocal":\s*"vless",.*?)"port":\s*[0-9]*,' '$1"port":'" ${old_port}" ${orig_config}
     v2ray_port=$old_port
 else
     v2ray_port=$($check_port)
 fi
 
 if [ -n "$old_ss_port" ]; then
-    replace_multiline1 '("protocol": "shadowsocks",.*"port": )\d+' '${1}'"${old_ss_port}" /etc/${service_name}/config.json
+    replace_multiline1 '("protocol": "shadowsocks",.*"port": )\d+' '${1}'"${old_ss_port}" ${orig_config}
     ss_port=$old_ss_port
 else
     ss_port=$($check_ss_port)
 fi
 
 if [ -n "$old_ss_method" ]; then
-    replace_regex1 '"method": ".*"' "\"method\": \"${old_ss_method}\"" /etc/${service_name}/config.json
+    replace_regex1 '"method": ".*"' "\"method\": \"${old_ss_method}\"" ${orig_config}
     ss_method=$old_ss_method
 else
     ss_method=$($check_ss_method)
@@ -212,12 +214,12 @@ fi
 
 if [[ -n "$old_ss_password" ]] && [[ "$old_ss_password" != "SSPASS" ]]; then
     ss_password=$old_ss_password
-    # replace_regex1 '"password": ".*"' "\"password\": \"${ss_password}\"" /etc/${service_name}/config.json
+    # replace_regex1 '"password": ".*"' "\"password\": \"${ss_password}\"" ${orig_config}
 else
     # 生成的密钥长度与 2022-blake3-chacha20-poly1305 2022-blake3-aes-256-gcm 兼容
     ss_password=$(openssl rand -base64 32)
 fi
-replace_string1 'SSPASS' "$ss_password" /etc/${service_name}/config.json
+replace_string1 'SSPASS' "$ss_password" ${orig_config}
 
 config_sysctl_for_proxy
 
@@ -226,7 +228,9 @@ systemctl enable $service_name
 if [ "$use_xtls" == "true" ]; then
     if [ -z "$old_reality_domain_name" ]; then
         # 使用 xray_server.json 中的默认配置，即: www.hko.gov.hk:443
-        # 还可以选择香港运输署 www.td.gov.hk
+        # 还可以选择以下候选者：
+        # www.td.gov.hk
+        # www.cmchk.org.hk
         # 韩国推荐 freegame.gg
         # 要求: 1. HTTP/2+ 2. TLS 1.3+
         reality_domain_name=$($check_reality_domain_name)
@@ -240,8 +244,8 @@ if [ "$use_xtls" == "true" ]; then
 
         echo "Using exists reality domain name ${old_reality_domain_name}..."
 
-        replace_regex1 '"dest": ".*"' "\"dest\": \"${reality_domain_name}\"" /etc/${service_name}/config.json
-        replace_regex '"serverNames": \[".*"\]' "\"serverNames\": [\"${client_server_name}\"]" /etc/${service_name}/config.json
+        replace_regex1 '"dest": ".*"' "\"dest\": \"${reality_domain_name}\"" ${orig_config}
+        replace_regex '"serverNames": \[".*"\]' "\"serverNames\": [\"${client_server_name}\"]" ${orig_config}
     fi
 
     if [ -n "$old_reality_private_key" ] && [[ "$old_reality_private_key" != "REALITY_PRIVATE_KEY_HERE" ]]; then
@@ -257,7 +261,7 @@ if [ "$use_xtls" == "true" ]; then
         reality_private_key=$(echo "$key_pairs" |head -n1 |cut -d: -f2 |cut -d' ' -f2)
         reality_public_key=$(echo "$key_pairs" |tail -n1 |cut -d: -f2 |cut -d' ' -f2)
     fi
-    replace_string 'REALITY_PRIVATE_KEY_HERE' "$reality_private_key" /etc/${service_name}/config.json
+    replace_string 'REALITY_PRIVATE_KEY_HERE' "$reality_private_key" ${orig_config}
 fi
 
 # geoip_version=$(github_latest_release v2fly/geoip)
