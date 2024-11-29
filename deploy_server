@@ -341,7 +341,8 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "archlinux.org",
                     "woaimoon.net",
                     "bing.com",
-                    "cloudflare.com"
+                    "cloudflare.com",
+                    "fonts.gstatic.com"
                 ]
             }
         ],
@@ -382,7 +383,8 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "archlinux.org",
                     "woaimoon.net",
                     "bing.com",
-                    "cloudflare.com"
+                    "cloudflare.com",
+                    "fonts.gstatic.com"
                 ],
                 "outboundTag": "direct"
             },
