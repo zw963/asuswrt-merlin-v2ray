@@ -313,7 +313,9 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "googleapis.com",
                     "gstatic.com",
                     "xn--ngstr-lra8j.com",
-                    "googleusercontent.com"
+                    "googleusercontent.com",
+                    "raw.githubusercontent.com",
+                    "github.githubassets.com"
                 ]
             },
             {
@@ -341,8 +343,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "archlinux.org",
                     "woaimoon.net",
                     "bing.com",
-                    "cloudflare.com",
-                    "fonts.gstatic.com"
+                    "cloudflare.com"
                 ]
             }
         ],
@@ -383,8 +384,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "archlinux.org",
                     "woaimoon.net",
                     "bing.com",
-                    "cloudflare.com",
-                    "fonts.gstatic.com"
+                    "cloudflare.com"
                 ],
                 "outboundTag": "direct"
             },
