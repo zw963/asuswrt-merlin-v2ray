@@ -315,7 +315,9 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "xn--ngstr-lra8j.com",
                     "googleusercontent.com",
                     "raw.githubusercontent.com",
-                    "github.githubassets.com"
+                    "github.githubassets.com",
+                    "googlevideo.com",
+                    "ytimg.com"
                 ]
             },
             {
@@ -337,9 +339,6 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "yzzy-online.com",
                     "cjkypo.com",
                     "gitlab.com",
-                    "fonts.gstatic.com",
-                    "fonts.googleapis.com",
-                    "googlevideo.com",
                     "scootersoftware.com",
                     "archlinux.org",
                     "woaimoon.net",
@@ -379,9 +378,6 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "yzzy-online.com",
                     "cjkypo.com",
                     "gitlab.com",
-                    "fonts.gstatic.com",
-                    "fonts.googleapis.com",
-                    "googlevideo.com",
                     "scootersoftware.com",
                     "archlinux.org",
                     "woaimoon.net",
@@ -430,7 +426,9 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "xn--ngstr-lra8j.com",
                     "googleusercontent.com",
                     "raw.githubusercontent.com",
-                    "github.githubassets.com"
+                    "github.githubassets.com",
+                    "googlevideo.com",
+                    "ytimg.com"
                 ],
                 "outboundTag": "proxy"
             },
