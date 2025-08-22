@@ -317,7 +317,10 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "raw.githubusercontent.com",
                     "github.githubassets.com",
                     "googlevideo.com",
-                    "ytimg.com"
+                    "ytimg.com",
+                    "techcrunch.com",
+                    "openai.com",
+                    "chatgpt.com"
                 ]
             },
             {
@@ -342,7 +345,10 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "archlinux.org",
                     "woaimoon.net",
                     "bing.com",
-                    "cloudflare.com"
+                    "cloudflare.com",
+                    "ruby-china.org",
+                    "crystal-china.org",
+                    "hk.centanet.com"
                 ]
             }
         ],
@@ -380,7 +386,10 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "archlinux.org",
                     "woaimoon.net",
                     "bing.com",
-                    "cloudflare.com"
+                    "ruby-china.org",
+                    "crystal-china.org",
+                    "cloudflare.com",
+                    "hk.centanet.com"
                 ],
                 "outboundTag": "direct"
             },
@@ -426,7 +435,10 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "raw.githubusercontent.com",
                     "github.githubassets.com",
                     "googlevideo.com",
-                    "ytimg.com"
+                    "ytimg.com",
+                    "techcrunch.com",
+                    "openai.com",
+                    "chatgpt.com"
                 ],
                 "outboundTag": "proxy"
             },
