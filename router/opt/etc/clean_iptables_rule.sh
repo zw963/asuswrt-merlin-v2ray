@@ -5,6 +5,7 @@ echo -n 'Cleaning iptables rule ...'
 if ! opkg --version &>/dev/null; then
     # 旁路由
     alias iptables='sudo iptables'
+    alias ip6tables='sudo ip6tables'
     alias ip='sudo ip'
     alias modprobe='sudo modprobe'
     dns_port=53
@@ -55,5 +56,7 @@ iptables -t mangle -X DIVERT 2>/dev/null          # --delete-chain
 
 ip route del local default dev lo table 100 2>/dev/null
 ip rule del fwmark 1 table 100 2>/dev/null
+
+ip6tables -F
 
 echo '[0m[1;32m done.[0m'
