@@ -19,6 +19,7 @@ ipdata=geoip-only-cn-private.dat
 
 geoip_tag=$(github_latest_release v2fly/geoip)
 
+set -e
 geoip_url=https://github.com/v2fly/geoip/releases/download/${geoip_tag}/$ipdata
 wget -c $geoip_url -O $ROOT/${ipdata}.new
 
@@ -26,6 +27,7 @@ wget -c $geoip_url -O $ROOT/${ipdata}.new
 geosite_tag=$(github_latest_release v2fly/domain-list-community)
 geosite_url=https://github.com/v2fly/domain-list-community/releases/download/${geosite_tag}/dlc.dat
 wget -c $geosite_url -O $ROOT/${sitedata}.new
+set +e
 
 if [ $? == 0 ]; then
     if  [ -e /opt/etc ]; then

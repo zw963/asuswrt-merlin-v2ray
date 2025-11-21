@@ -22,6 +22,7 @@ echo -n 'Applying iptables rule ...'
 if ! opkg --version &>/dev/null; then
     # 旁路由
     alias iptables='sudo iptables'
+    alias ip6tables='sudo ip6tables'
     alias ip='sudo ip'
     alias modprobe='sudo modprobe'
     sleep=0.2
@@ -152,6 +153,8 @@ function apply_socket_rule () {
 }
 
 if modprobe xt_TPROXY &>/dev/null; then
+    ip6tables -I OUTPUT -m addrtype ! --dst-type LOCAL -j DROP
+
     apply_tproxy_rule
     # 下面的 rule 使得路由器内访问 google 可以工作。
     # 似乎在 fakedns 模式下不工作。
