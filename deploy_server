@@ -285,24 +285,17 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
         "loglevel": "warning"
     },
     "dns": {
-        "queryStrategy": "UseIPv4",
+        // "queryStrategy": "UseIPv4",
+        // 默认就是 false, 表示开启 fallback，表示如果遍历之后没有匹配的结果,
+        // 将使用 servers 里面的第一个 8.8.4.4 访问。
+        "disableFallback": false,
         "hosts": {
             "geosite:category-ads-all": "127.0.0.1"
         },
         "servers": [
-            {
-                // 1. 默认/兜底 DNS：所有未匹配到国内规则的域名，都走这里（即国外域名）
-                // 这里的 8.8.4.4 会被路由规则导向 Proxy
-                "address": "8.8.4.4",
-                "port": 53,
-                "domains": [], // 空列表代表匹配所有，作为默认值
-                "expectIPs": ["geoip:!cn"] // 期望非 CN IP，如果不满足可能会回退（可选）
-            },
-            {
-                "address": "8.8.4.4",
-                "domains": [ "geosite:geolocation-!cn" ],
-                "proxy": true
-            },
+            // 1. 默认/兜底 DNS：所有未匹配到国内规则的域名，都走这里（即国外域名）
+            // 这里的 8.8.4.4 会被路由规则导向 Proxy
+            "8.8.4.4",
             {
                 "address": "8.8.4.4",
                 "port": 53,
@@ -310,18 +303,6 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     // 警告: 不要将 googleapis.com 加入黑名单，会导致从 google play 安装 app 失败。
                     "services.googleapis.cn",
                     "aiyifan.tv"
-                ]
-            },
-            {
-                // 180.76.76.76 是百度的 DNS，你可以替换为当地运营商的
-                // 这里之前是 localhost, 造成了死循环，严重影响访问国内网站的性能。
-                "address": "180.76.76.76",
-                "port": 53,
-                "domains": [
-                    "geosite:geolocation-cn"
-                ],
-                "expectIPs": [
-                    "ext:geoip-only-cn-private.dat:cn"
                 ]
             },
             {
@@ -353,22 +334,42 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                     "hk.centanet.com",
                     "ip111.cn"
                 ]
-            }
+            },
+            {
+                "address": "8.8.4.4",
+                "port": 53,
+                "domains": [], // 空列表代表匹配所有，作为默认值
+                "expectIPs": ["geoip:!cn"] // 期望非 CN IP，如果不满足可能会回退（可选）
+            },
+            // {
+            //     "address": "8.8.4.4",
+            //     "domains": [ "geosite:geolocation-!cn" ],
+            //     "proxy": true
+            // },
+            {
+                // 180.76.76.76 是百度的 DNS，你可以替换为当地运营商的
+                // 这里之前是 localhost, 造成了死循环，严重影响访问国内网站的性能。
+                "address": "180.76.76.76",
+                "port": 53,
+                "domains": [
+                    "geosite:geolocation-cn"
         ],
-        // 默认为 false, 开启后，如果通过默认的 DNS 访问返回结果不匹配 cn site/ip,
-        // 将使用 servers 里面的第一个，8.8.4.4 访问。
-        "disableFallback": false
+                "expectIPs": [
+                    "ext:geoip-only-cn-private.dat:cn"
+                ]
+            }
+        ]
     },
     "routing": {
-        "domainStrategy": "UseIPv4",
+        // "domainStrategy": "UseIPv4",
         "rules": [
             // 注意，排序的策略跟先写 proxy 还是 direct 无关，是基于匹配条件。
             // 精确匹配在前面，模糊匹配（基于数据库策略）在后面。
-            {
-                "type": "field",
-                "ip": ["::/0"],
-                "outboundTag": "block"
-            },
+            // {
+            //     "type": "field",
+            //     "ip": ["::/0"],
+            //     "outboundTag": "block"
+            // },
             {
                 // tproxy 透明代理必需。
                 "type": "field",
