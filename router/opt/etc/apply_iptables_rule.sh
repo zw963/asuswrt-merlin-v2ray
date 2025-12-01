@@ -1,5 +1,8 @@
 #!/bin/sh
 
+[ "$(id -u)" -ne 0 ] && exec sudo "$0" "$@"
+
+# 如果规则已经存在则不重复添加（IPv4 & IPv6 都检测一下）
 if iptables -t mangle -C PREROUTING -j V2RAY_UDP 2>/dev/null; then
     exit 0
 fi
@@ -21,10 +24,7 @@ echo -n 'Applying iptables rule ...'
 
 if ! opkg --version &>/dev/null; then
     # 旁路由
-    alias iptables='sudo iptables'
-    alias ip6tables='sudo ip6tables'
-    alias ip='sudo ip'
-    alias modprobe='sudo modprobe'
+    use_asuswrt=false
     sleep=0.2
 else
     # 路由器
@@ -56,31 +56,37 @@ fi
 
 function apply_tproxy_rule () {
     echo -n ' Applying TProxy rule ...'
-    # 由于使用了mangle表，所以数据包的原始和目的地址都是不会被修改的。
 
+    # 确保 fwmark 1 的路由表（IPv4 / IPv6）存在，幂等
+    # local 是一个路由类型，指将网络包发给系统本地协议栈。
+    ip rule add fwmark 1 table 100
+    ip route add local default dev lo table 100
+
+    # 由于使用了mangle表，所以数据包的原始和目的地址都是不会被修改的。
     # 定义了一个叫做 V2RAY_UDP 的 empty chain.
     iptables -t mangle -N V2RAY_UDP
 
     # step 1: 所有针对本地地址、VPS 服务器地址的流量直连
     iptables -t mangle -A V2RAY_UDP -d 127.0.0.1/8 -j RETURN
-    iptables -t mangle -A V2RAY_UDP -d 172.0.0.0/8 -j RETURN # 这个似乎被 docker 内部使用, 使用容器必须
     iptables -t mangle -A V2RAY_UDP -d 255.255.255.255 -j RETURN
-    # step 2: 但是针对局域网地址，tcp 总是流量直连，局域网内目标地址是 53 的 udp 流量，则继续走代理。
+
+    # step 2: 局域网地址，TCP 总是直连，UDP 只有 53 端口走代理
+    iptables -t mangle -A V2RAY_UDP -d 10.0.0.0/8 -p tcp -j RETURN
+    iptables -t mangle -A V2RAY_UDP -d 10.0.0.0/8 -p udp ! --dport 53 -j RETURN
+
+    # iptables -t mangle -A V2RAY_UDP -d 172.0.0.0/8 -j RETURN # 这个似乎被 docker 内部使用, 使用容器必须
+    iptables -t mangle -A V2RAY_UDP -d 172.16.0.0/12 -p tcp -j RETURN
+    iptables -t mangle -A V2RAY_UDP -d 172.16.0.0/12 -p udp ! --dport 53 -j RETURN
+
+    # 但是针对局域网地址，tcp 总是流量直连，局域网内目标地址是 53 的 udp 流量，则继续走代理。
     iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p tcp -j RETURN
     iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
+
+    # 远程 VPS 地址直连
     iptables -t mangle -A V2RAY_UDP -d $v2ray_server_ip -j RETURN
 
-    # step 5: 从 V2Ray 发出的流量，再次经过时 netfilter 时，如果是 V2Ray 标记过
-    # 为 255 的流量，全部走直连.
-    iptables -t mangle -A V2RAY_UDP -j RETURN -m mark --mark 0xff
-
-    # More details, see https://www.kernel.org/doc/Documentation/networking/tproxy.txt
-
-    # 下面两行代码，将使用 --tproxy-mark 1 标记过的 udp/tcp 数据包路由到本机回环接口
-    # 间接实现了类似于 redirect 的功能，而且同时对 tcp/udp 生效.
-    ip rule add fwmark 1 table 100
-    # local 是一个路由类型，指将网络包发给系统本地协议栈。
-    ip route add local default dev lo table 100
+    # 从 V2Ray 发出的流量，再次经过时 netfilter 时，如果是 V2Ray 标记过为 255 的流量，全部走直连.
+    iptables -t mangle -A V2RAY_UDP -m mark --mark 0xff -j RETURN
 
     # step 3: 这个不会解释，反正知道和上面的 ip rule/route 一起，可以针对 tcp/udp 实现类似于 redirect 的功能。
     # 同时需要在 V2Ray 的入站的地方加
@@ -90,12 +96,15 @@ function apply_tproxy_rule () {
     #     }
     # }
     # 来确保 V2Ray 可以识别这种流量。
+
+    #  TPROXY 把匹配的 TCP/UDP 包转发到本机 dokodemo-door 端口
+    # More details, see https://www.kernel.org/doc/Documentation/networking/tproxy.txt
+
+    # 下面两行代码，将使用 --tproxy-mark 1 标记过的 udp/tcp 数据包路由到本机回环接口
+    # 间接实现了类似于 redirect 的功能，而且同时对 tcp/udp 生效.
     iptables -t mangle -A V2RAY_UDP -p udp -j TPROXY --on-ip 127.0.0.1 --on-port $local_v2ray_port --tproxy-mark 1
     # 之前手贱, 这里加了一个 ! --dport 22, 等于 22 端口不设 tproxy mark, 造成 22 一定翻墙, 引起很多问题.
     iptables -t mangle -A V2RAY_UDP -p tcp -j TPROXY --on-ip 127.0.0.1 --on-port $local_v2ray_port --tproxy-mark 1
-
-    # step 4: V2Ray 内部处理，outbounds 的地方也设定为 255.
-
 
     # 将 V2RAY_UDP 这个 rule-chain, 附加到 PREROUTING 这个网关的 `mangle 占位符' 的最后面.
     iptables -t mangle -A PREROUTING -j V2RAY_UDP
@@ -107,16 +116,22 @@ function apply_gateway_rule () {
 
     iptables -t mangle -N V2RAY_MASK # 代理网关本机
 
-    # step 1: 所有针对本地地址、VPS 服务器地址的流量直连
     iptables -t mangle -A V2RAY_MASK -d 127.0.0.1/8 -j RETURN
-    iptables -t mangle -A V2RAY_MASK -d 172.0.0.0/8 -j RETURN # 这个似乎被 docker 内部使用, 使用容器必须
     iptables -t mangle -A V2RAY_MASK -d 255.255.255.255 -j RETURN
+
+    iptables -t mangle -A V2RAY_MASK -d 10.0.0.0/8 -p tcp -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d 10.0.0.0/8 -p udp ! --dport 53 -j RETURN
+
+    iptables -t mangle -A V2RAY_MASK -d 172.16.0.0/12 -p tcp -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d 172.16.0.0/12 -p udp ! --dport 53 -j RETURN
+
     # 这里不要瞎改成和上面 tproxy 一样，否则，（可能是因为 53 端口走代理），会造成旁路由重启后不会同步时间。
     # 但是只有让 UDP 53 走代理，才能避免来自网通路由器的 DNS 污染，只能先开启吧。
     # 如果是旁路由，记得替换下面两行为：iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -j RETURN
     # 来确保时间同步服务可以正常工作。
     iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p tcp -j RETURN
     iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
+
     iptables -t mangle -A V2RAY_MASK -d $v2ray_server_ip -j RETURN
 
     # 避免影响时间同步服务
@@ -133,6 +148,49 @@ function apply_gateway_rule () {
 
     iptables -t mangle -A OUTPUT -j V2RAY_MASK # 应用规则
 }
+
+function apply_tproxy_rule_v6 () {
+    echo -n ' Applying IPv6 TProxy rule ...'
+
+    ip -6 rule add fwmark 1 table 100 2>/dev/null
+    ip -6 route add local ::/0 dev lo table 100 2>/dev/null
+
+    ip6tables -t mangle -N V2RAY6_UDP 2>/dev/null
+
+    # 本地 / 链路本地 / ULA 直连
+    ip6tables -t mangle -A V2RAY6_UDP -d ::1/128  -j RETURN
+    ip6tables -t mangle -A V2RAY6_UDP -d fe80::/10 -j RETURN
+    ip6tables -t mangle -A V2RAY6_UDP -d fc00::/7 -j RETURN
+
+    # 已被 xray 标记过的流量直连
+    ip6tables -t mangle -A V2RAY6_UDP -m mark --mark 0xff -j RETURN
+
+    # 把 TCP/UDP 流量 TPROXY 到本机 dokodemo-door 端口（::1）
+    ip6tables -t mangle -A V2RAY6_UDP -p udp -j TPROXY --on-ip ::1 --on-port "$local_v2ray_port" --tproxy-mark 1
+    ip6tables -t mangle -A V2RAY6_UDP -p tcp -j TPROXY --on-ip ::1 --on-port "$local_v2ray_port" --tproxy-mark 1
+
+    ip6tables -t mangle -A PREROUTING -j V2RAY6_UDP
+}
+
+function apply_gateway_rule_v6 () {
+    echo -n ' Apply IPv6 gateway rule ...'
+
+    ip6tables -t mangle -N V2RAY6_MASK 2>/dev/null || true
+
+    ip6tables -t mangle -A V2RAY6_MASK -d ::1/128  -j RETURN
+    ip6tables -t mangle -A V2RAY6_MASK -d fe80::/10 -j RETURN
+    ip6tables -t mangle -A V2RAY6_MASK -d fc00::/7 -j RETURN
+
+    # 已被 xray 标记过的流量直连
+    ip6tables -t mangle -A V2RAY6_MASK -m mark --mark 0xff -j RETURN
+
+    # 给 IPv6 出站流量打标记，重路由到 TPROXY
+    ip6tables -t mangle -A V2RAY6_MASK -p udp -j MARK --set-mark 1
+    ip6tables -t mangle -A V2RAY6_MASK -p tcp -j MARK --set-mark 1
+
+    ip6tables -t mangle -A OUTPUT -j V2RAY6_MASK
+}
+
 
 function apply_DNS_redirect () {
     # 这个之前只是在 tproxy 模式下，不懂怎么用的时候，监听在 53 或 65053 端口用。
@@ -153,13 +211,21 @@ function apply_socket_rule () {
 }
 
 if modprobe xt_TPROXY &>/dev/null; then
-    ip6tables -I OUTPUT -m addrtype ! --dst-type LOCAL -j DROP
-
     apply_tproxy_rule
     # 下面的 rule 使得路由器内访问 google 可以工作。
     # 似乎在 fakedns 模式下不工作。
     apply_gateway_rule
+
+    # 这些 rule 只是导入 IP v6 到 xray，但是仍需要 VPS 服务器支持  ipv6,
+    # 才能正确的暴露 VPS 的 IP V6 地址到外部。
+    if which ip6tables &>/dev/null; then
+        # ip6tables -I OUTPUT -m addrtype ! --dst-type LOCAL -j DROP
+        apply_tproxy_rule_v6
+        apply_gateway_rule_v6
+    fi
+
     # apply_socket_rule
+
 
     # if [ "$use_asuswrt" == true ]; then
     #     apply_DNS_redirect

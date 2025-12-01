@@ -1,13 +1,11 @@
 #!/bin/sh
 
+[ "$(id -u)" -ne 0 ] && exec sudo "$0" "$@"
+
 echo -n 'Cleaning iptables rule ...'
 
 if ! opkg --version &>/dev/null; then
     # 旁路由
-    alias iptables='sudo iptables'
-    alias ip6tables='sudo ip6tables'
-    alias ip='sudo ip'
-    alias modprobe='sudo modprobe'
     dns_port=53
     sleep=0.2
 else
@@ -57,6 +55,27 @@ iptables -t mangle -X DIVERT 2>/dev/null          # --delete-chain
 ip route del local default dev lo table 100 2>/dev/null
 ip rule del fwmark 1 table 100 2>/dev/null
 
-ip6tables -F
+if which ip6tables &>/dev/null; then
+    # ip6tables -F
+
+    # 1) 清理 IPv6 mangle 表中的 V2RAY6_UDP（PREROUTING 挂钩）
+    while ip6tables -t mangle -C PREROUTING -j V2RAY6_UDP 2>/dev/null; do
+        ip6tables -t mangle -D PREROUTING -j V2RAY6_UDP
+        sleep $sleep
+    done
+    ip6tables -t mangle -F V2RAY6_UDP 2>/dev/null
+    ip6tables -t mangle -X V2RAY6_UDP 2>/dev/null
+
+    # 2) 清理 IPv6 mangle 表中的 V2RAY6_MASK（OUTPUT 挂钩）
+    while ip6tables -t mangle -C OUTPUT -j V2RAY6_MASK 2>/dev/null; do
+        ip6tables -t mangle -D OUTPUT -j V2RAY6_MASK
+        sleep $sleep
+    done
+    ip6tables -t mangle -F V2RAY6_MASK 2>/dev/null
+    ip6tables -t mangle -X V2RAY6_MASK 2>/dev/null
+
+    ip -6 route del local ::/0 dev lo table 100 2>/dev/null
+    ip -6 rule del fwmark 1 table 100 2>/dev/null
+fi
 
 echo '[0m[1;32m done.[0m'
