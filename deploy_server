@@ -295,6 +295,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
         "servers": [
             // 1. 默认/兜底 DNS：所有未匹配到国内规则的域名，都走这里（即国外域名）
             // 这里的 8.8.4.4 会被路由规则导向 Proxy
+            "8.8.4.4",
             {
                 "address": "8.8.4.4",
                 "port": 53,
