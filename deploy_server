@@ -1,6 +1,6 @@
 #!/bin/sh
 
-self="$(\curl -sS https://gitee.com/zw963/deployment_bash/raw/v0.8.13/deploy_start.sh)" && eval "$self"
+self="$(\curl -sS https://gitee.com/zw963/deployment_bash/raw/v0.9.0/deploy_start.sh)" && eval "$self"
 # self="$(cat /home/common/Project/deployment_bash/deploy_start.sh)" && eval "$self"
 
 export_variable use_xtls="${use_xtls-true}"
