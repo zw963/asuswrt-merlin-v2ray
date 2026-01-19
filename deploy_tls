@@ -7,7 +7,7 @@ if grep -qs -e 'set_your_domain_name_here' ./xray_server.json; then
 fi
 
 
-self="$(\curl -sS https://gitlab.com/zw963/deployment_bash/-/raw/v0.8.3/deploy_start.sh)" && eval "$self"
+self="$(\curl -sS https://gitee.com/zw963/deployment_bash/raw/v0.8.3/deploy_start.sh)" && eval "$self"
 export_variable target=$1
 export_variable domain_name=$(cat ./xray_server.json |grep certificateFile | sed 's#.*/etc/ssl/\(.*\)/fullchain.pem.*#\1#g')
 
