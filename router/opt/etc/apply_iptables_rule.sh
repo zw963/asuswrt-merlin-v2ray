@@ -1,6 +1,6 @@
 #!/bin/sh
 
-[ "$(id -u)" -ne 0 ] && exec sudo "$0" "$@"
+[ "$(id -u)" -ne 0 ] && exec sudo -E "$0" "$@"
 
 # 如果规则已经存在则不重复添加（IPv4 & IPv6 都检测一下）
 if iptables -t mangle -C PREROUTING -j V2RAY_UDP 2>/dev/null; then
@@ -40,6 +40,8 @@ else
     config_file=./config.json
 fi
 
+# 看起来广电分配的 ipv6 前缀就是这个。
+LAN6_PREFIX="240a:4291:6400:22a0::/64"
 local_v2ray_port=$(cat $config_file |grep '"inbounds"' -A10 |grep '"protocol" *: *"dokodemo-door"' -A10 |grep -o '"port": [0-9]*,' |grep -o '[0-9]*')
 
 if [ -z "$local_v2ray_port" ]; then
@@ -161,6 +163,7 @@ function apply_tproxy_rule_v6 () {
     ip6tables -t mangle -A V2RAY6_UDP -d ::1/128  -j RETURN
     ip6tables -t mangle -A V2RAY6_UDP -d fe80::/10 -j RETURN
     ip6tables -t mangle -A V2RAY6_UDP -d fc00::/7 -j RETURN
+    ip6tables -t mangle -A V2RAY6_UDP  -d "$LAN6_PREFIX" -j RETURN
 
     # 已被 xray 标记过的流量直连
     ip6tables -t mangle -A V2RAY6_UDP -m mark --mark 0xff -j RETURN
@@ -180,6 +183,7 @@ function apply_gateway_rule_v6 () {
     ip6tables -t mangle -A V2RAY6_MASK -d ::1/128  -j RETURN
     ip6tables -t mangle -A V2RAY6_MASK -d fe80::/10 -j RETURN
     ip6tables -t mangle -A V2RAY6_MASK -d fc00::/7 -j RETURN
+    ip6tables -t mangle -A V2RAY6_MASK -d "$LAN6_PREFIX" -j RETURN
 
     # 已被 xray 标记过的流量直连
     ip6tables -t mangle -A V2RAY6_MASK -m mark --mark 0xff -j RETURN
