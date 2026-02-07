@@ -2,10 +2,10 @@
 
 ROOT=${0%/*}
 
-config=$ROOT/${1-config.json}
+export v2ray_config=$ROOT/${1-config.json}
 etc_folder=$ROOT/../router/opt/etc
 
-echo "Use config $(readlink $config)"
+echo "Use config $(readlink $v2ray_config)"
 
 echo '------------------------------'
 
@@ -17,4 +17,4 @@ clean_up() {
 }
 
 $etc_folder/apply_iptables_rule.sh
-sudo $ROOT/linux-amd64/xray run -c $config
+sudo $ROOT/linux-amd64/xray run -c $v2ray_config
