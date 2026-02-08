@@ -44,7 +44,11 @@ clean_up () {
 }
 
 while kill -0 "$xray_pid" 2>/dev/null; do
+    # 等待用户从 fd 3 输入，如果 0.2 秒没有输入，则直接返回 true，循环继续。
     IFS= read -rsn1 -t 0.2 k <&3 || true
+    # 八进制 034 = 十进制 28 = 十六进制 0x1C
+    # ASCII 0x1C 是 FS（File Separator） 控制字符
+    # 在终端常见映射里：Ctrl+\ 对应的字符就是 0x1C
     [[ "${k:-}" == $'\034' ]] && toggle_proxy
 done
 
