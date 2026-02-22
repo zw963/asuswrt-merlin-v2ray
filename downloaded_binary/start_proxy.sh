@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -u
 
+case "$(uname -m)" in
+    x86_64)  arch="amd64" ;;
+    aarch64) arch="arm64" ;;
+    *)       echo "not supported arch: $(uname -m)";  exit ;;
+esac
+
 ROOT=${0%/*}
 
 export v2ray_config="$ROOT/${1:-config.json}"
@@ -22,7 +28,7 @@ $etc_folder/apply_iptables_rule.sh
 echo "[init] iptables applied"
 
 # 启动 xray（日志仍在 Konsole）
-sudo $ROOT/linux-amd64/xray run -c "$v2ray_config" </dev/null &
+sudo $ROOT/linux-$arch/xray run -c "$v2ray_config" </dev/null &
 xray_pid=$!
 
 echo "Press Ctrl+\\ to toggle iptables. Ctrl+C to exit."
