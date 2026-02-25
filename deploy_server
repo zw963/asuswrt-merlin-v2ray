@@ -253,7 +253,7 @@ if [ "$use_xtls" == "true" ]; then
         echo "Use exists x25519 key pairs ..."
 
         reality_private_key=$old_reality_private_key
-        reality_public_key=$(/usr/local/bin/xray x25519 -i $reality_private_key |tail -n1 |cut -d: -f2 |cut -d' ' -f2)
+        reality_public_key=$(/usr/local/bin/xray x25519 -i $reality_private_key |grep '^Password:' |cut -d: -f2 |cut -d' ' -f2)
     else
         # 重新生成
         echo "Geneate new x25519 key pairs ..."
