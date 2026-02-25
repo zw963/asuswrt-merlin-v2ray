@@ -285,6 +285,110 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
     "log": {
         "loglevel": "warning"
     },
+    "outbounds": [
+        // 下面两个顺序不可以颠倒, 因为列表中的第一个元素作为主出站协议, 当路由匹配不存在或没有匹配成功时，
+        // 流量由主出站协议发出, 我们要确保主出站协议必须是 proxy.
+        {
+            "tag": "proxy",
+            "protocol": "vless", // 出口协议
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "$targetip", // 服务器地址，请修改为你自己的服务器 IP 或域名
+                        "port": $v2ray_port,  // 服务器端口
+                        "users": [
+                            {
+                                // 注意, vmess 加密默认开启, 也必须开启, 否则上不了网.
+                                // alterId 默认为 0, 表示开启 VMessAEAD.
+                                // vless 则默认关闭加密 none，但必须有这个设定
+                                "encryption": "none",
+                                // Splice 模式的的使用限制：
+
+                                // Linux 环境
+                                // 入站协议为 Dokodemo door、Socks、HTTP 等纯净的 TCP 连接, 或其它使用了 XTLS 的入站协议
+                                // 出站协议为 VLESS + XTLS
+                                // 需要注意的是，使用 mKCP 协议时不会使用 Splice（是的，虽然没有报错，但实际上根本没用到
+                                // 此外，使用 Splice 时网速显示会滞后，这是特性，不是 bug。
+                                // 使用 Vision 模式 如果满足上述条件 会自动启用 Splice
+                                "flow": "xtls-rprx-vision",
+                                "id": "$uuid"  // 用户 ID，必须与服务器端配置相同
+                            }
+                            ]
+                    }
+                    ]
+            },
+            "streamSettings": {
+                "network": "tcp",
+                // reality 方式，用户无需拥有自己的域名，可以使用任何合法的网站，速度也更快。
+                "security": "reality",
+                "realitySettings": {
+                    "fingerprint": "chrome",
+                    "serverName": "${client_server_name}",
+                    "publicKey": "${reality_public_key}"
+                },
+                "sockopt": {
+                    "tcpcongestion": "bbr", // 如果不设定，会自动使用系统设置
+                    "tcpMptcp": true,
+                    "tcpNoDelay": true,
+                    "mark": 255
+                }
+            }
+        },
+        {
+            "protocol": "shadowsocks",
+            "settings": {
+                "servers": [
+                    {
+                        "address": "$targetip", // Shadowsocks 的服务器地址
+                        "method": "$ss_method", // Shadowsocks 的加密方式
+                        "password": "$ss_password", // Shadowsocks 的密码
+                        "port": $ss_port
+                    }
+                ]
+            },
+            "streamSettings": {
+                "sockopt": {
+                    "mark": 255
+                }
+            }
+        },
+        {
+            // 识别这是一个 DNS 请求， 并发送到内部 DNS 进行查询.
+            "tag": "dns-outbound",
+            "protocol": "dns",
+            "proxySettings": {
+                "tag": "proxy"
+            },
+            "streamSettings": {
+                "sockopt": {
+                    "mark": 255
+                }
+            }
+        },
+        {
+            "tag": "direct",
+            "protocol": "freedom",
+            "settings": {
+                // 这里我选择加上试试, 搞不好我的方案, freedom 真的又去访问 dnsmasq
+                // 的 53 端口, 又被转到 V2ray 的 DNS 呢.
+                "domainStrategy": "UseIPv4"
+            },
+            "streamSettings": {
+                "sockopt": {
+                    "mark": 255
+                }
+            }
+        },
+        {
+            "tag": "block",
+            "protocol": "blackhole",
+            "settings": {
+                "response": {
+                    "type": "http"
+                }
+            }
+        }
+    ],
     "dns": {
         // "queryStrategy": "UseIPv4",
         // 默认就是 false, 表示开启 fallback，表示如果遍历之后没有匹配的结果,
@@ -502,110 +606,6 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
             "port": 3128,
             "settings": {
                 "timeout": 0
-            }
-        }
-    ],
-    "outbounds": [
-        // 下面两个顺序不可以颠倒, 因为列表中的第一个元素作为主出站协议, 当路由匹配不存在或没有匹配成功时，
-        // 流量由主出站协议发出, 我们要确保主出站协议必须是 proxy.
-        {
-            "tag": "proxy",
-            "protocol": "vless", // 出口协议
-            "settings": {
-                "vnext": [
-                    {
-                        "address": "$targetip", // 服务器地址，请修改为你自己的服务器 IP 或域名
-                        "port": $v2ray_port,  // 服务器端口
-                        "users": [
-                            {
-                                // 注意, vmess 加密默认开启, 也必须开启, 否则上不了网.
-                                // alterId 默认为 0, 表示开启 VMessAEAD.
-                                // vless 则默认关闭加密 none，但必须有这个设定
-                                "encryption": "none",
-                                // Splice 模式的的使用限制：
-
-                                // Linux 环境
-                                // 入站协议为 Dokodemo door、Socks、HTTP 等纯净的 TCP 连接, 或其它使用了 XTLS 的入站协议
-                                // 出站协议为 VLESS + XTLS
-                                // 需要注意的是，使用 mKCP 协议时不会使用 Splice（是的，虽然没有报错，但实际上根本没用到
-                                // 此外，使用 Splice 时网速显示会滞后，这是特性，不是 bug。
-                                // 使用 Vision 模式 如果满足上述条件 会自动启用 Splice
-                                "flow": "xtls-rprx-vision",
-                                "id": "$uuid"  // 用户 ID，必须与服务器端配置相同
-                            }
-                            ]
-                    }
-                    ]
-            },
-            "streamSettings": {
-                "network": "tcp",
-                // reality 方式，用户无需拥有自己的域名，可以使用任何合法的网站，速度也更快。
-                "security": "reality",
-                "realitySettings": {
-                    "fingerprint": "chrome",
-                    "serverName": "${client_server_name}",
-                    "publicKey": "${reality_public_key}"
-                },
-                "sockopt": {
-                    "tcpcongestion": "bbr", // 如果不设定，会自动使用系统设置
-                    "tcpMptcp": true,
-                    "tcpNoDelay": true,
-                    "mark": 255
-                }
-            }
-        },
-        {
-            "protocol": "shadowsocks",
-            "settings": {
-                "servers": [
-                    {
-                        "address": "$targetip", // Shadowsocks 的服务器地址
-                        "method": "$ss_method", // Shadowsocks 的加密方式
-                        "password": "$ss_password", // Shadowsocks 的密码
-                        "port": $ss_port
-                    }
-                ]
-            },
-            "streamSettings": {
-                "sockopt": {
-                    "mark": 255
-                }
-            }
-        },
-        {
-            // 识别这是一个 DNS 请求， 并发送到内部 DNS 进行查询.
-            "tag": "dns-outbound",
-            "protocol": "dns",
-            "proxySettings": {
-                "tag": "proxy"
-            },
-            "streamSettings": {
-                "sockopt": {
-                    "mark": 255
-                }
-            }
-        },
-        {
-            "tag": "direct",
-            "protocol": "freedom",
-            "settings": {
-                // 这里我选择加上试试, 搞不好我的方案, freedom 真的又去访问 dnsmasq
-                // 的 53 端口, 又被转到 V2ray 的 DNS 呢.
-                "domainStrategy": "UseIPv4"
-            },
-            "streamSettings": {
-                "sockopt": {
-                    "mark": 255
-                }
-            }
-        },
-        {
-            "tag": "block",
-            "protocol": "blackhole",
-            "settings": {
-                "response": {
-                    "type": "http"
-                }
             }
         }
     ],
