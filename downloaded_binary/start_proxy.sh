@@ -28,7 +28,13 @@ $etc_folder/apply_iptables_rule.sh
 echo "[init] iptables applied"
 
 # 启动 xray（日志仍在 Konsole）
-sudo $ROOT/linux-$arch/xray run -c "$v2ray_config" </dev/null &
+if [ -e $etc_folder/geoip.dat ]; then
+    assets_folder=$etc_folder
+else
+    assets_folder=$ROOT/linux-$arch
+fi
+
+sudo XRAY_LOCATION_ASSET=$assets_folder $ROOT/linux-$arch/xray run -c "$v2ray_config" </dev/null &
 xray_pid=$!
 
 echo "Press Ctrl+\\ to toggle iptables. Ctrl+C to exit."
