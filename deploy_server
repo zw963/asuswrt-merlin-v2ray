@@ -87,16 +87,15 @@ HEREDOC
                 )
 
 
+export_variable old_ss_port=$(ssh $target "$check_ss_port")
+export_variable old_ss_method=$(ssh $target "$check_ss_method")
+export_variable old_ss_password=$(ssh $target cat ${orig_config} 2>/dev/null |grep '"protocol": "shadowsocks"' -A5 |grep password |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#')
 
 # those config will fetch the default value from server config.
 export_variable old_port=$(ssh $target "$check_port")
-export_variable old_ss_port=$(ssh $target "$check_ss_port")
-export_variable old_ss_method=$(ssh $target "$check_ss_method")
 export_variable old_reality_domain_name=$(ssh $target "$check_reality_domain_name")
-
 # those config will generated new config instead if not exists old config.
 export_variable old_uuid=$(ssh $target cat ${orig_config} 2>/dev/null |grep '"flow": "xtls-rprx' -A5 -B5 |grep '"id":' |cut -d: -f2 |cut -d'"' -f2)
-export_variable old_ss_password=$(ssh $target cat ${orig_config} 2>/dev/null |grep '"protocol": "shadowsocks"' -A5 |grep password |cut -d: -f2 |sed -e 's#.*"\(.*\)".*#\1#')
 export_variable old_reality_private_key=$(ssh $target cat ${orig_config} 2>/dev/null |grep '"privateKey":' |cut -d: -f2- |cut -d'"' -f2)
 export_variable arch=${router_arch-linux-arm32-v5}
 
@@ -118,7 +117,6 @@ if [ -f /etc/systemd/system/$service_name.service ]; then
     systemctl stop $service_name
     systemctl stop $another_service_name
     systemctl disable $another_service_name
-    systemctl daemon-reload
     set -e
 fi
 
@@ -259,8 +257,8 @@ if [ "$use_xtls" == "true" ]; then
         echo "Geneate new x25519 key pairs ..."
 
         key_pairs=$(/usr/local/bin/xray x25519)
-        reality_private_key=$(echo "$key_pairs" |head -n1 |cut -d: -f2 |cut -d' ' -f2)
-        reality_public_key=$(echo "$key_pairs" |tail -n1 |cut -d: -f2 |cut -d' ' -f2)
+        reality_private_key=$(echo "$key_pairs" |grep 'PrivateKey:' |cut -d: -f2 |cut -d' ' -f2)
+        reality_public_key=$(echo "$key_pairs" |grep '^Password:' |cut -d: -f2 |cut -d' ' -f2)
     fi
     replace_string 'REALITY_PRIVATE_KEY_HERE' "$reality_private_key" ${orig_config}
 fi
