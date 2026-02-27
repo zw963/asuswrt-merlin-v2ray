@@ -140,8 +140,12 @@ function apply_gateway_rule () {
     iptables -t mangle -A V2RAY_MASK -p udp --dport 123 -j RETURN
     iptables -t mangle -A V2RAY_MASK -p udp --dport 323 -j RETURN
 
+    # cloudflared 常用出站：7844（Argo Tunnel）；先直连放行
+    iptables -t mangle -A V2RAY_MASK -p tcp --dport 7844 -j RETURN
+    iptables -t mangle -A V2RAY_MASK -p udp --dport 7844 -j RETURN
+
     # 直连 SO_MARK 为 0xff 的流量(0xff 是 16 进制数，数值上等同与上面V2Ray 配置的 255)，此规则目的是避免代理本机(网关)流量出现回环问题
-    iptables -t mangle -A V2RAY_MASK -j RETURN -m mark --mark 0xff
+    iptables -t mangle -A V2RAY_MASK -m mark --mark 0xff -j RETURN
 
     # 在 OUTPUT 链打标记会使相应的包重路由到 PREROUTING 链上，
     # 在已经配置好了 PREROUTING 相关的透明代理的情况下，OUTPUT 链也可以透明代理了，
@@ -184,6 +188,10 @@ function apply_gateway_rule_v6 () {
     ip6tables -t mangle -A V2RAY6_MASK -d fe80::/10 -j RETURN
     ip6tables -t mangle -A V2RAY6_MASK -d fc00::/7 -j RETURN
     ip6tables -t mangle -A V2RAY6_MASK -d "$LAN6_PREFIX" -j RETURN
+
+    # cloudflared 常用出站：7844（Argo Tunnel）；先直连放行
+    ip6tables -t mangle -A V2RAY6_MASK -p tcp --dport 7844 -j RETURN
+    ip6tables -t mangle -A V2RAY6_MASK -p udp --dport 7844 -j RETURN
 
     # 已被 xray 标记过的流量直连
     ip6tables -t mangle -A V2RAY6_MASK -m mark --mark 0xff -j RETURN
