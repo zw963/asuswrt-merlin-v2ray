@@ -281,7 +281,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
 // 运行 ./deploy_side_router root@one_ip 部署这个配置文件到旁路由。
 {
     "log": {
-        "loglevel": "warning"
+        "loglevel": "none"
     },
     "outbounds": [
         // 下面两个顺序不可以颠倒, 因为列表中的第一个元素作为主出站协议, 当路由匹配不存在或没有匹配成功时，
