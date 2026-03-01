@@ -311,9 +311,9 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                                 "flow": "xtls-rprx-vision",
                                 "id": "$uuid"  // 用户 ID，必须与服务器端配置相同
                             }
-                            ]
+                        ]
                     }
-                    ]
+                ]
             },
             "streamSettings": {
                 "network": "tcp",
@@ -456,7 +456,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                 "port": 53,
                 "domains": [
                     "geosite:geolocation-cn"
-        ],
+                ],
                 "expectIPs": [
                     "ext:geoip-only-cn-private.dat:cn"
                 ]
@@ -478,7 +478,7 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                 "type": "field",
                 "inboundTag": ["transparent"],
                 "port": 53,
-                "network": "udp",
+                "network": "tcp,udp",
                 "outboundTag": "dns-outbound"
             },
             {
