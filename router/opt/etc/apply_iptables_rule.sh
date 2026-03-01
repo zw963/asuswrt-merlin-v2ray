@@ -4,6 +4,7 @@
 
 # 如果规则已经存在则不重复添加（IPv4 & IPv6 都检测一下）
 if iptables -t mangle -C PREROUTING -j V2RAY_UDP 2>/dev/null; then
+    echo 'Skipping because this script was ran.'
     exit 0
 fi
 
