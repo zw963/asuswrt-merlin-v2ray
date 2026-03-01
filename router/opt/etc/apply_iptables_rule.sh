@@ -41,8 +41,6 @@ else
     config_file=./config.json
 fi
 
-# 看起来广电分配的 ipv6 前缀就是这个。
-LAN6_PREFIX="240a:4291:6400:22a0::/64"
 local_v2ray_port=$(cat $config_file |grep '"inbounds"' -A10 |grep '"protocol" *: *"dokodemo-door"' -A10 |grep -o '"port": [0-9]*,' |grep -o '[0-9]*')
 
 if [ -z "$local_v2ray_port" ]; then
@@ -62,27 +60,34 @@ function apply_tproxy_rule () {
 
     # 确保 fwmark 1 的路由表（IPv4 / IPv6）存在，幂等
     # local 是一个路由类型，指将网络包发给系统本地协议栈。
-    ip rule add fwmark 1 table 100
-    ip route add local default dev lo table 100
+    ip rule add fwmark 1 table 100 2>/dev/null || true
+    ip route add local 0.0.0.0/0 dev lo table 100 2>/dev/null || true
 
     # 由于使用了mangle表，所以数据包的原始和目的地址都是不会被修改的。
     # 定义了一个叫做 V2RAY_UDP 的 empty chain.
     iptables -t mangle -N V2RAY_UDP
 
-    # step 1: 所有针对本地地址、VPS 服务器地址的流量直连
-    iptables -t mangle -A V2RAY_UDP -d 127.0.0.1/8 -j RETURN
+    # step 1: 所有针对本地地址直连
+    iptables -t mangle -A V2RAY_UDP -d 0.0.0.0/8 -j RETURN
+    iptables -t mangle -A V2RAY_UDP -d 127.0.0.0/8 -j RETURN
+    iptables -t mangle -A V2RAY_UDP -d 169.254.0.0/16 -j RETURN
+    iptables -t mangle -A V2RAY_UDP -d 224.0.0.0/4 -j RETURN
+    iptables -t mangle -A V2RAY_UDP -d 240.0.0.0/4 -j RETURN
     iptables -t mangle -A V2RAY_UDP -d 255.255.255.255 -j RETURN
 
+    # 视情况（可能会影响极少数“特殊网络”）
+    iptables -t mangle -A V2RAY_UDP -d 100.64.0.0/10 -j RETURN
+
     # step 2: 局域网地址，TCP 总是直连，UDP 只有 53 端口走代理
-    iptables -t mangle -A V2RAY_UDP -d 10.0.0.0/8 -p tcp -j RETURN
+    iptables -t mangle -A V2RAY_UDP -d 10.0.0.0/8 -p tcp ! --dport 53 -j RETURN
     iptables -t mangle -A V2RAY_UDP -d 10.0.0.0/8 -p udp ! --dport 53 -j RETURN
 
     # iptables -t mangle -A V2RAY_UDP -d 172.0.0.0/8 -j RETURN # 这个似乎被 docker 内部使用, 使用容器必须
-    iptables -t mangle -A V2RAY_UDP -d 172.16.0.0/12 -p tcp -j RETURN
+    iptables -t mangle -A V2RAY_UDP -d 172.16.0.0/12 -p tcp ! --dport 53 -j RETURN
     iptables -t mangle -A V2RAY_UDP -d 172.16.0.0/12 -p udp ! --dport 53 -j RETURN
 
     # 但是针对局域网地址，tcp 总是流量直连，局域网内目标地址是 53 的 udp 流量，则继续走代理。
-    iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p tcp -j RETURN
+    iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p tcp ! --dport 53 -j RETURN
     iptables -t mangle -A V2RAY_UDP -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
 
     # 远程 VPS 地址直连
@@ -119,20 +124,27 @@ function apply_gateway_rule () {
 
     iptables -t mangle -N V2RAY_MASK # 代理网关本机
 
-    iptables -t mangle -A V2RAY_MASK -d 127.0.0.1/8 -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d 0.0.0.0/8 -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d 127.0.0.0/8 -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d 169.254.0.0/16 -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d 224.0.0.0/4 -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d 240.0.0.0/4 -j RETURN
     iptables -t mangle -A V2RAY_MASK -d 255.255.255.255 -j RETURN
 
-    iptables -t mangle -A V2RAY_MASK -d 10.0.0.0/8 -p tcp -j RETURN
+    # 视情况（可能会影响极少数“特殊网络”）
+    iptables -t mangle -A V2RAY_MASK -d 100.64.0.0/10 -j RETURN
+
+    iptables -t mangle -A V2RAY_MASK -d 10.0.0.0/8 -p tcp ! --dport 53 -j RETURN
     iptables -t mangle -A V2RAY_MASK -d 10.0.0.0/8 -p udp ! --dport 53 -j RETURN
 
-    iptables -t mangle -A V2RAY_MASK -d 172.16.0.0/12 -p tcp -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d 172.16.0.0/12 -p tcp ! --dport 53 -j RETURN
     iptables -t mangle -A V2RAY_MASK -d 172.16.0.0/12 -p udp ! --dport 53 -j RETURN
 
     # 这里不要瞎改成和上面 tproxy 一样，否则，（可能是因为 53 端口走代理），会造成旁路由重启后不会同步时间。
     # 但是只有让 UDP 53 走代理，才能避免来自网通路由器的 DNS 污染，只能先开启吧。
     # 如果是旁路由，记得替换下面两行为：iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -j RETURN
     # 来确保时间同步服务可以正常工作。
-    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p tcp -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p tcp ! --dport 53 -j RETURN
     iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
 
     iptables -t mangle -A V2RAY_MASK -d $v2ray_server_ip -j RETURN
@@ -156,11 +168,31 @@ function apply_gateway_rule () {
     iptables -t mangle -A OUTPUT -j V2RAY_MASK # 应用规则
 }
 
+if command -v python3 &>/dev/null;then
+    get_lan6_prefix64() {
+        dev="${1:-$(ip -6 route show default | sed -n 's/.* dev \([^ ]*\).*/\1/p' | head -n1)}"
+        [ -n "$dev" ] || return 1
+
+        ip -6 addr show dev "$dev" scope global 2>/dev/null \
+            | awk '/inet6/ && $2 !~ /temporary/ {print $2; exit}' \
+            | python3 - <<'PY'
+import sys, ipaddress
+s=sys.stdin.read().strip()
+if not s:
+    sys.exit(1)
+ip = ipaddress.IPv6Interface(s)
+net = ipaddress.IPv6Network((int(ip.ip) & ((1<<128)- (1<<64)), 64))
+print(str(net))
+PY
+    }
+    LAN6_PREFIX="$(get_lan6_prefix64 "$@" || true)"
+fi
+
 function apply_tproxy_rule_v6 () {
     echo -n ' Applying IPv6 TProxy rule ...'
 
-    ip -6 rule add fwmark 1 table 100 2>/dev/null
-    ip -6 route add local ::/0 dev lo table 100 2>/dev/null
+    ip -6 rule add fwmark 1 table 100 2>/dev/null || true
+    ip -6 route add local ::/0 dev lo table 100 2>/dev/null || true
 
     ip6tables -t mangle -N V2RAY6_UDP 2>/dev/null
 
@@ -168,7 +200,10 @@ function apply_tproxy_rule_v6 () {
     ip6tables -t mangle -A V2RAY6_UDP -d ::1/128  -j RETURN
     ip6tables -t mangle -A V2RAY6_UDP -d fe80::/10 -j RETURN
     ip6tables -t mangle -A V2RAY6_UDP -d fc00::/7 -j RETURN
-    ip6tables -t mangle -A V2RAY6_UDP  -d "$LAN6_PREFIX" -j RETURN
+
+    # 这里的 "${LAN6_PREFIX:-}" 用法很有趣，确保这个变量即使没定义(python 没检测到
+    #变量也存在，但是一个空字符串)，因此 -n 判断失败，但是 set -u 不会失败。
+    [ -n "${LAN6_PREFIX:-}" ] && ip6tables -t mangle -A V2RAY6_UDP  -d "$LAN6_PREFIX" -j RETURN
 
     # 已被 xray 标记过的流量直连
     ip6tables -t mangle -A V2RAY6_UDP -m mark --mark 0xff -j RETURN
@@ -188,7 +223,7 @@ function apply_gateway_rule_v6 () {
     ip6tables -t mangle -A V2RAY6_MASK -d ::1/128  -j RETURN
     ip6tables -t mangle -A V2RAY6_MASK -d fe80::/10 -j RETURN
     ip6tables -t mangle -A V2RAY6_MASK -d fc00::/7 -j RETURN
-    ip6tables -t mangle -A V2RAY6_MASK -d "$LAN6_PREFIX" -j RETURN
+    [ -n "${LAN6_PREFIX:-}" ] && ip6tables -t mangle -A V2RAY6_MASK -d "$LAN6_PREFIX" -j RETURN
 
     # cloudflared 常用出站：7844（Argo Tunnel）；先直连放行
     ip6tables -t mangle -A V2RAY6_MASK -p tcp --dport 7844 -j RETURN
