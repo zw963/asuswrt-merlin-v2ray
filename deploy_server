@@ -475,6 +475,8 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
             // },
             {
                 // tproxy 透明代理必需。
+                // 这里开启 tcp 的 53 代理，并在 iptables 将局域网 tcp 流量也倒过来
+                // 对改进树莓派作为旁路由很有帮助。
                 "type": "field",
                 "inboundTag": ["transparent"],
                 "port": 53,
