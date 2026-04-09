@@ -14,19 +14,22 @@ function github_latest_release () {
     echo "$tag"
 }
 
-sitedata=geosite.dat
-ipdata=geoip-only-cn-private.dat
+sitedata=$ROOT/geosite.dat
+ipdata=$ROOT/geoip-only-cn-private.dat
+ipdata_full=$ROOT/geoip.dat
 
 geoip_tag=$(github_latest_release v2fly/geoip)
 
 set -e
-geoip_url=https://github.com/v2fly/geoip/releases/download/${geoip_tag}/$ipdata
-wget -c $geoip_url -O $ROOT/${ipdata}.new
+geoip_url=https://github.com/v2fly/geoip/releases/download/${geoip_tag}/geoip-only-cn-private.dat
+wget -c $geoip_url -O ${ipdata}.new
 
+geoip_url=https://github.com/v2fly/geoip/releases/download/${geoip_tag}/geoip.dat
+wget -c $geoip_url -O ${ipdata_full}.new
 
 geosite_tag=$(github_latest_release v2fly/domain-list-community)
 geosite_url=https://github.com/v2fly/domain-list-community/releases/download/${geosite_tag}/dlc.dat
-wget -c $geosite_url -O $ROOT/${sitedata}.new
+wget -c $geosite_url -O ${sitedata}.new
 set +e
 
 if [ $? == 0 ]; then
@@ -52,6 +55,12 @@ if [ $? == 0 ]; then
             rm -f ${ipdata}.new
         fi
 
+        if [ "$(ls -l ${ipdata_full}.new |awk '{print $5}')" -gt 130000 ]; then
+            cp $ipdata_full ${ipdata_full}.old
+            cp ${ipdata_full}.new $ipdata_full
+            rm -f ${ipdata_full}.new
+        fi
+
         if [ -e /opt/etc/init.d/S22v2ray ]; then
             /opt/etc/init.d/S22v2ray start
         else
@@ -69,6 +78,12 @@ if [ $? == 0 ]; then
             cp $ipdata ${ipdata}.old
             cp ${ipdata}.new $ipdata
             rm -f ${ipdata}.new
+        fi
+
+        if [ "$(ls -l ${ipdata_full}.new |awk '{print $5}')" -gt 130000 ]; then
+            cp $ipdata_full ${ipdata_full}.old
+            cp ${ipdata_full}.new $ipdata_full
+            rm -f ${ipdata_full}.new
         fi
 
         echo 'restart proxy to take effect.'
