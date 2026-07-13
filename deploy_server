@@ -361,6 +361,22 @@ cat <<HEREDOC > /etc/$service_name/client_config.json
                 "sockopt": {
                     "mark": 255
                 }
+            },
+            "settings": {
+                // A/AAAA 交给 Xray 内置 DNS，继续按 dns.servers 进行境内外分流。
+                // 其他查询类型不支持内置 DNS，统一通过代理转发至 8.8.4.4。
+                // 注意：非 A/AAAA 查询不再使用国内 DNS，可能失去地域优化或内网记录。
+                "rewriteAddress": "8.8.4.4",
+                "rewritePort": 53,
+                "rules": [
+                    {
+                        "action": "hijack",
+                        "qType": "1,28"
+                    },
+                    {
+                        "action": "direct"
+                    }
+                ]
             }
         },
         {
