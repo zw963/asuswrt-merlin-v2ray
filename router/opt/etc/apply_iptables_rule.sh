@@ -157,6 +157,10 @@ function apply_gateway_rule () {
     iptables -t mangle -A V2RAY_MASK -p tcp --dport 7844 -j RETURN
     iptables -t mangle -A V2RAY_MASK -p udp --dport 7844 -j RETURN
 
+    # 树莓派本机发出的 DNS 查询不进入 Xray
+    iptables -t mangle -A V2RAY_MASK -p udp --dport 53 -j RETURN
+    iptables -t mangle -A V2RAY_MASK -p tcp --dport 53 -j RETURN
+
     # 直连 SO_MARK 为 0xff 的流量(0xff 是 16 进制数，数值上等同与上面V2Ray 配置的 255)，此规则目的是避免代理本机(网关)流量出现回环问题
     iptables -t mangle -A V2RAY_MASK -m mark --mark 0xff -j RETURN
 
