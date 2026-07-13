@@ -134,18 +134,23 @@ function apply_gateway_rule () {
     # 视情况（可能会影响极少数“特殊网络”）
     iptables -t mangle -A V2RAY_MASK -d 100.64.0.0/10 -j RETURN
 
-    iptables -t mangle -A V2RAY_MASK -d 10.0.0.0/8 -p tcp ! --dport 53 -j RETURN
-    iptables -t mangle -A V2RAY_MASK -d 10.0.0.0/8 -p udp ! --dport 53 -j RETURN
+    # iptables -t mangle -A V2RAY_MASK -d 10.0.0.0/8 -p tcp ! --dport 53 -j RETURN
+    # iptables -t mangle -A V2RAY_MASK -d 10.0.0.0/8 -p udp ! --dport 53 -j RETURN
 
-    iptables -t mangle -A V2RAY_MASK -d 172.16.0.0/12 -p tcp ! --dport 53 -j RETURN
-    iptables -t mangle -A V2RAY_MASK -d 172.16.0.0/12 -p udp ! --dport 53 -j RETURN
+    # iptables -t mangle -A V2RAY_MASK -d 172.16.0.0/12 -p tcp ! --dport 53 -j RETURN
+    # iptables -t mangle -A V2RAY_MASK -d 172.16.0.0/12 -p udp ! --dport 53 -j RETURN
 
-    # 这里不要瞎改成和上面 tproxy 一样，否则，（可能是因为 53 端口走代理），会造成旁路由重启后不会同步时间。
-    # 但是只有让 UDP 53 走代理，才能避免来自网通路由器的 DNS 污染，只能先开启吧。
-    # 如果是旁路由，记得替换下面两行为：iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -j RETURN
-    # 来确保时间同步服务可以正常工作。
-    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p tcp ! --dport 53 -j RETURN
-    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
+    # # 这里不要瞎改成和上面 tproxy 一样，否则，（可能是因为 53 端口走代理），会造成旁路由重启后不会同步时间。
+    # # 但是只有让 UDP 53 走代理，才能避免来自网通路由器的 DNS 污染，只能先开启吧。
+    # # 如果是旁路由，记得替换下面两行为：iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -j RETURN
+    # # 来确保时间同步服务可以正常工作。
+    # iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p tcp ! --dport 53 -j RETURN
+    # iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -p udp ! --dport 53 -j RETURN
+
+    # 私有网络全部直连，这三行替换了上面的所有注释部分。
+    iptables -t mangle -A V2RAY_MASK -d 10.0.0.0/8 -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d 172.16.0.0/12 -j RETURN
+    iptables -t mangle -A V2RAY_MASK -d 192.168.0.0/16 -j RETURN
 
     iptables -t mangle -A V2RAY_MASK -d $v2ray_server_ip -j RETURN
 
