@@ -15,3 +15,4 @@ downloaded_binary/linux-amd64/README.md
 downloaded_binary/linux-amd64/Xray-linux-64.zip
 downloaded_binary/linux-arm*
 downloaded_binary/*.bak
+*.old
